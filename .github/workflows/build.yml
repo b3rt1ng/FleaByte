@@ -1,0 +1,77 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Cache ESP32 core
+        uses: actions/cache@v4
+        with:
+          path: ~/.arduino15
+          key: arduino-esp32-${{ hashFiles('tools/fqbn.sh') }}
+
+      - name: Install core and libraries
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install "Adafruit GFX Library" "Adafruit ST7735 and ST7789 Library"
+
+      - name: Build release image
+        run: ./tools/release.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            release/firmware.bin
+            release/firmware.bin.sha256
+
+      - name: Stage web flasher
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cp release/firmware.bin release/manifest.json docs/
+          echo "Flash page staged with $(du -h docs/firmware.bin | cut -f1) image"
+
+      - name: Upload Pages artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/firmware.bin
+            release/firmware.bin.sha256
+
+  pages:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -41,6 +41,22 @@ Pin assignments come from the
 | Button | 0 |
 | microSD (SD_MMC) | CLK 12, CMD 16, D0 14, D1 17, D2 21, D3 18 |
 
+## Installing
+
+Prebuilt images are attached to each
+[release](../../releases). One file, flashed at offset `0x0`:
+
+```sh
+esptool --chip esp32s3 --port /dev/ttyACM0 write-flash 0x0 firmware.bin
+```
+
+Hold the button while plugging the dongle in to put it in the bootloader
+first, then release. The image stops before the filesystem partition, so an
+update keeps saved payloads and settings.
+
+A browser flasher is published alongside each release if you would rather
+not install anything.
+
 ## Building
 
 Requires ESP32 Arduino core **3.3.0 or later** and USB mode set to
@@ -174,7 +190,8 @@ live.
 | `web_api.h/.cpp` | HTTP server, API, captive portal |
 | `web_assets.h` | Web interface, compiled into the firmware |
 | `partitions.csv` | 16 MB layout, 4 MB app, 7.88 MB filesystem |
-| `tools/` | Build and flash scripts |
+| `tools/` | Build, flash and release scripts |
+| `docs/` | Browser flasher published to GitHub Pages |
 
 Payloads run in their own FreeRTOS task, which keeps the web server
 answering during a run and makes the progress readout and *Stop* work.
