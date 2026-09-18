@@ -8,6 +8,8 @@ page, pick the keyboard layout of the machine it is plugged into, write or
 select a script, and run it. The screen shows the network, how many devices
 are connected, and what the dongle is doing.
 
+![Fleabyte status screen](docs/screens/screen-idle.png)
+
 ## What it does
 
 * Keystroke scripting with a DuckyScript subset, from a web editor
@@ -17,6 +19,15 @@ are connected, and what the dongle is doing.
 * microSD exposed to the host as a removable drive, with a file browser
 * Status screen with run progress, and a configurable RGB LED
 * Served entirely from the dongle, no internet, no cloud
+
+The screen is 160x80. It shows the network, the number of connected
+devices, the active keyboard layout, whether a card is mounted, and the
+progress of a running payload.
+
+| | |
+|---|---|
+| ![Access](docs/screens/screen-access.png) | ![Running](docs/screens/screen-running.png) |
+| Waiting for the first connection | Running a payload |
 
 ## Scope of use
 
@@ -190,7 +201,7 @@ live.
 | `web_api.h/.cpp` | HTTP server, API, captive portal |
 | `web_assets.h` | Web interface, compiled into the firmware |
 | `partitions.csv` | 16 MB layout, 4 MB app, 7.88 MB filesystem |
-| `tools/` | Build, flash and release scripts |
+| `tools/` | Build, flash, release and screen rendering scripts |
 | `docs/` | Browser flasher published to GitHub Pages |
 
 Payloads run in their own FreeRTOS task, which keeps the web server

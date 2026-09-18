@@ -194,15 +194,12 @@ static void drawCorners(uint16_t color) {
 static void drawSdIcon(int16_t x, int16_t y, uint16_t color) {
   const int16_t w = 9, h = 12, bevel = 3;
 
-  tft.drawFastVLine(x, y, h, color);
-  tft.drawFastVLine(x + w - 1, y + bevel, h - bevel, color);
-  tft.drawFastHLine(x, y + h - 1, w, color);
-  tft.drawFastHLine(x, y, w - bevel, color);
-  tft.drawLine(x + w - bevel - 1, y, x + w - 1, y + bevel, color);
-
-  tft.drawFastVLine(x + 2, y + 3, 3, color);
-  tft.drawFastVLine(x + 4, y + 3, 3, color);
-  tft.drawFastVLine(x + 6, y + 5, 2, color);
+  for (int16_t j = 0; j < h; j++) {
+    tft.drawFastHLine(x, y + j, (j < bevel) ? (w - bevel + j) : w, color);
+  }
+  for (int16_t i = 2; i <= 6; i += 2) {
+    tft.drawFastVLine(x + i, y + h - 4, 3, C_BG);
+  }
 }
 
 static void paintSdState(int8_t state) {
@@ -297,8 +294,8 @@ void displayShowJoin(const String &ssid, const String &password) {
   tft.fillScreen(C_BG);
   drawCorners(C_MAGENTA);
 
-  putText(8, 4, "//ACCESS", C_CYAN, 1);
-  tft.drawFastHLine(8, 14, screenW() - 16, C_DIM);
+  putText(14, 4, "//ACCESS", C_CYAN, 1);
+  tft.drawFastHLine(8, 15, screenW() - 16, C_DIM);
 
   putText(8, 22, "SSID", C_DIM, 1);
   putText(8, 32, truncate(ssid, charsPerLine()), C_TEXT, 1);
@@ -315,8 +312,8 @@ void displayShowMessage(const String &title, const String &detail) {
   tft.fillScreen(C_BG);
   drawCorners(C_RED);
 
-  putText(8, 4, "//ALERT", C_MAGENTA, 1);
-  tft.drawFastHLine(8, 14, screenW() - 16, C_DIM);
+  putText(14, 4, "//ALERT", C_MAGENTA, 1);
+  tft.drawFastHLine(8, 15, screenW() - 16, C_DIM);
   putText(8, 30, truncate(title, charsPerLine()), C_TEXT, 1);
   putText(8, 44, truncate(detail, charsPerLine()), C_DIM, 1);
 
