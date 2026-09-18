@@ -69,9 +69,15 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    # The web flasher is a convenience. Pages needs a public repository on
+    # the free plan, so a failure here must not fail the release.
+    continue-on-error: true
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - id: deploy
         uses: actions/deploy-pages@v4
