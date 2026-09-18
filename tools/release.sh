@@ -33,7 +33,7 @@ VERSION="$(sed -n 's/.*FIRMWARE_VERSION *"\([^"]*\)".*/\1/p' "$ROOT/$SKETCH/conf
 
 cat > "$OUT/manifest.json" <<JSON
 {
-  "name": "T-Dongle Keyboard",
+  "name": "Fleabyte",
   "version": "${VERSION}",
   "new_install_prompt_erase": false,
   "builds": [

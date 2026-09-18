@@ -3,11 +3,11 @@
 
 #define FIRMWARE_VERSION "0.1.0"
 
-#define AP_SSID_PREFIX     "T-Dongle"
-#define AP_PASSWORD_PREFIX "dongle-"
+#define AP_SSID_PREFIX     "Fleabyte"
+#define AP_PASSWORD_PREFIX "flea-"
 #define AP_CHANNEL     6
 #define AP_MAX_CLIENTS 4
-#define MDNS_HOST      "dongle"
+#define MDNS_HOST      "fleabyte"
 
 #define TFT_MOSI 3
 #define TFT_SCLK 5
@@ -61,7 +61,7 @@
 #define START_DELAY_MAX 3600
 
 // Bumping this overwrites the bundled example payloads on next boot.
-#define PAYLOAD_SEED_VERSION 5
+#define PAYLOAD_SEED_VERSION 6
 
-#define DEVICE_NAME_DEFAULT "T-Dongle-S3"
+#define DEVICE_NAME_DEFAULT "Fleabyte"
 #define DEVICE_NAME_MAX     16

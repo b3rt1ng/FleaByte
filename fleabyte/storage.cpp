@@ -12,7 +12,7 @@ static const char *DEMO_LAYOUT_TEST =
   "REM Open a text editor BEFORE running this payload.\n"
   "REM These are the characters that move between AZERTY and QWERTY.\n"
   "DELAY 500\n"
-  "STRINGLN --- T-Dongle S3 layout test ---\n"
+  "STRINGLN --- Fleabyte layout test ---\n"
   "STRINGLN azertyuiop qwertyuiop\n"
   "STRINGLN AZERTYUIOP QWERTYUIOP\n"
   "STRINGLN 0123456789\n"
@@ -25,7 +25,7 @@ static const char *DEMO_REFERENCE =
   "REM Every command the interpreter understands.\n"
   "REM Running this types the reference out, so open a text editor first.\n"
   "DELAY 500\n"
-  "STRINGLN == T-Dongle S3 command reference ==\n"
+  "STRINGLN == Fleabyte command reference ==\n"
   "STRINGLN\n"
   "STRINGLN REM text              a comment, does nothing\n"
   "STRINGLN META windows|linux|macos   tags this payload, never typed\n"
@@ -58,7 +58,7 @@ static const char *DEMO_NOTEPAD =
   "STRING notepad\n"
   "ENTER\n"
   "DELAY 1200\n"
-  "STRINGLN Payload executed from the T-Dongle S3.\n"
+  "STRINGLN Payload executed from Fleabyte.\n"
   "STRING Test machine only.\n";
 
 static const char *DEMO_URL =
@@ -78,7 +78,7 @@ static const char *DEMO_LINUX =
   "DELAY 300\n"
   "CTRL ALT t\n"
   "DELAY 1500\n"
-  "STRINGLN echo \"T-Dongle S3 - HID test $(date)\"\n";
+  "STRINGLN echo \"Fleabyte - HID test $(date)\"\n";
 
 static const char *DEMO_MACOS =
   "META macos\n"
@@ -90,7 +90,7 @@ static const char *DEMO_MACOS =
   "DELAY 700\n"
   "ENTER\n"
   "DELAY 2000\n"
-  "STRINGLN Payload executed from the T-Dongle S3.\n";
+  "STRINGLN Payload executed from Fleabyte.\n";
 
 static const char *DEMO_TIMING =
   "REM Shows the timing commands. Open a text editor first.\n"

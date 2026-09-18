@@ -6,7 +6,7 @@ static const char PAGE_INDEX[] PROGMEM = R"HTML(<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Dongle</title>
+<title>Fleabyte</title>
 <style>
 :root{
   --bg:#FAFAF7; --card:#FFFFFF; --line:#EAEAE4;
@@ -306,7 +306,7 @@ footer #ver{font:11.5px var(--mono)}
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="dot" id="dot"></span>Dongle</div>
+  <div class="brand"><span class="dot" id="dot"></span>Fleabyte</div>
   <div class="tools">
     <button class="chip" id="layoutchip" title="Keyboard layout">AZERTY</button>
     <button class="iconbtn" id="gear" aria-label="Settings">

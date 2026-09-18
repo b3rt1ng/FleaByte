@@ -1,4 +1,4 @@
-# T-Dongle Keyboard
+# Fleabyte
 
 Firmware for the LilyGO T-Dongle S3 that turns it into a USB keyboard you
 drive from a web page.
@@ -108,12 +108,12 @@ The screen shows the network name and password. Both derive from the device
 MAC, so every dongle starts with different credentials:
 
 ```
-T-Dongle-8218
-dongle-A0058218
+Fleabyte-8218
+flea-A0058218
 ```
 
 Join the network and the captive portal opens the page. Otherwise go to
-`http://192.168.4.1` or `http://dongle.local`. Both can be changed in
+`http://192.168.4.1` or `http://fleabyte.local`. Both can be changed in
 settings.
 
 Run `00-test-layout.txt` into a text editor on the target machine before
@@ -181,7 +181,7 @@ live.
 
 | Path | Contents |
 |---|---|
-| `wifi_ducky_s3.ino` | Startup, access point, main loop |
+| `fleabyte.ino` | Startup, access point, main loop |
 | `config.h` | Pins, defaults, limits |
 | `ducky.h/.cpp` | HID keyboard, layouts, interpreter, run task |
 | `storage.h/.cpp` | Payload library and settings on LittleFS |
