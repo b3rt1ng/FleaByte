@@ -43,5 +43,8 @@ bool duckyLayoutExists(const String &code);
 
 void duckyLog(const String &line);
 
-String duckyGetLog();
-void duckyClearLog();
+// The log is polled separately from the status so a four kilobyte string
+// is not serialised into every status response. seq counts bytes ever
+// appended: a client passes back what it has and receives only the rest.
+String duckyGetLogSince(uint32_t since, uint32_t &seqOut);
+uint32_t duckyClearLog();

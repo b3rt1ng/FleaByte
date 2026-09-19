@@ -102,9 +102,8 @@ static const char NOISE[] = "!<>-_\\/[]{}=+*^?#%$&@01";
 static String scramble(const String &target, uint8_t framesLeft, uint8_t framesTotal) {
   String out;
   out.reserve(target.length());
+  const size_t settledUpTo = target.length() * (framesTotal - framesLeft) / framesTotal;
   for (size_t i = 0; i < target.length(); i++) {
-
-    uint8_t settledUpTo = (uint8_t)(target.length() * (framesTotal - framesLeft) / framesTotal);
     if (i < settledUpTo || target[i] == ' ') {
       out += target[i];
     } else {

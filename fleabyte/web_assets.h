@@ -509,6 +509,7 @@ const $ = s => document.querySelector(s);
 const list = $('#list'), nameIn = $('#name'), script = $('#script');
 const runBtn = $('#run'), stopBtn = $('#stop'), status = $('#status'), logEl = $('#log');
 let current = null, layout = 'us', dirty = false, poll = true;
+let logSeq = 0, logText = '';
 
 script.addEventListener('input', () => dirty = true);
 
@@ -651,7 +652,29 @@ runBtn.onclick = async () => {
   } catch (e) { status.textContent = e.message; }
 };
 stopBtn.onclick = () => api('/api/stop', form({}));
-$('#clearlog').onclick = async () => { await api('/api/log/clear', form({})); refresh(); };
+$('#clearlog').onclick = async () => {
+  const r = await api('/api/log/clear', form({}));
+  logSeq = (await r.json()).seq;
+  logText = '';
+  paintLog();
+};
+
+function paintLog() {
+  logEl.textContent = logText || 'Nothing yet. The log fills up on the first run.';
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function pollLog() {
+  try {
+    const d = await (await api('/api/log?since=' + logSeq)).json();
+    if (d.text) {
+      logText += d.text;
+      if (logText.length > 8192) logText = logText.slice(-8192);
+      paintLog();
+    }
+    logSeq = d.seq;
+  } catch (e) {}
+}
 
 /* ---- settings ---- */
 let rotation = 1, screenOn = true, ledOn = true, ledColor = '#005A8C';
@@ -860,7 +883,6 @@ function paintState(s) {
     arrangement = s.arrangement;
     paintLayout();
   }
-  logEl.textContent = s.log || 'Nothing yet. The log fills up on the first run.';
   if (s.version) $('#ver').textContent = 'v' + s.version;
 }
 
@@ -875,6 +897,7 @@ async function refresh() {
   }
   try { paintState(s); } catch (e) { console.error('paintState', e); }
   try { paintList(s.payloads); } catch (e) { console.error('paintList', e); }
+  pollLog();
 }
 
 setInterval(refresh, 1000);

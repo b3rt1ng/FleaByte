@@ -80,10 +80,9 @@ static void handleState() {
   json += "\"total\":" + String(st.total) + ",";
   json += "\"countdown\":" + String(st.countdown) + ",";
   json += "\"message\":\"" + jsonEscape(st.message) + "\",";
-  json += "\"log\":\"" + jsonEscape(duckyGetLog()) + "\",";
 
   json += "\"payloads\":[";
-  std::vector<PayloadInfo> items = storageListDetailed();
+  const std::vector<PayloadInfo> &items = storageListDetailed();
   for (size_t i = 0; i < items.size(); i++) {
     if (i) json += ",";
     json += "{\"name\":\"" + jsonEscape(items[i].name) + "\",";
@@ -191,9 +190,16 @@ static void handleLayout() {
   sendJson(200, "{\"ok\":true}");
 }
 
+static void handleLog() {
+  uint32_t since = server.hasArg("since") ? (uint32_t)strtoul(server.arg("since").c_str(), nullptr, 10) : 0;
+  uint32_t seq = 0;
+  String text = duckyGetLogSince(since, seq);
+  sendJson(200, "{\"seq\":" + String(seq) + ",\"text\":\"" + jsonEscape(text) + "\"}");
+}
+
 static void handleLogClear() {
-  duckyClearLog();
-  sendJson(200, "{\"ok\":true}");
+  uint32_t seq = duckyClearLog();
+  sendJson(200, "{\"ok\":true,\"seq\":" + String(seq) + "}");
 }
 
 static void handleSettingsGet() {
@@ -441,6 +447,7 @@ void webBegin(const String &ssid) {
   server.on("/api/run", HTTP_POST, handleRun);
   server.on("/api/stop", HTTP_POST, handleStop);
   server.on("/api/layout", HTTP_POST, handleLayout);
+  server.on("/api/log", HTTP_GET, handleLog);
   server.on("/api/log/clear", HTTP_POST, handleLogClear);
   server.on("/api/settings", HTTP_GET, handleSettingsGet);
   server.on("/api/settings/wifi", HTTP_POST, handleWifiSave);

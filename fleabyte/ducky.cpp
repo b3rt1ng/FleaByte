@@ -62,6 +62,7 @@ static int g_countdown = 0;
 static uint16_t g_pendingDelay = 0;
 static String g_message = "Ready";
 static String g_log;
+static uint32_t g_logSeq = 0;
 static String g_layoutCode = "us";
 
 static uint32_t g_defaultDelay = DEFAULT_LINE_DELAY_MS;
@@ -150,6 +151,7 @@ static void logLine(const String &s) {
   lock();
   g_log += s;
   g_log += '\n';
+  g_logSeq += s.length() + 1;
   if (g_log.length() > MAX_LOG_BYTES) {
 
     int cut = g_log.indexOf('\n', g_log.length() - MAX_LOG_BYTES);
@@ -406,7 +408,7 @@ static void runScript(const String &script) {
 
     String upper = trimmed;
     upper.toUpperCase();
-    if (upper.startsWith("REPEAT")) {
+    if (upper == "REPEAT" || upper.startsWith("REPEAT ")) {
       int n = trimmed.substring(6).toInt();
       if (previousLine.isEmpty() || n <= 0) {
         logLine("L" + String(lineNo) + " REPEAT ignored");
@@ -540,15 +542,22 @@ String duckyGetLayout() {
 
 void duckyLog(const String &line) { logLine(line); }
 
-String duckyGetLog() {
+String duckyGetLogSince(uint32_t since, uint32_t &seqOut) {
   lock();
-  String l = g_log;
+  seqOut = g_logSeq;
+  uint32_t base = g_logSeq - g_log.length();
+  String out;
+  if (since < g_logSeq) {
+    out = (since <= base) ? g_log : g_log.substring(since - base);
+  }
   unlock();
-  return l;
+  return out;
 }
 
-void duckyClearLog() {
+uint32_t duckyClearLog() {
   lock();
   g_log = "";
+  uint32_t seq = g_logSeq;
   unlock();
+  return seq;
 }

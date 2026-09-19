@@ -283,7 +283,7 @@ static String osTagFor(const String &name) {
   return String();
 }
 
-std::vector<PayloadInfo> storageListDetailed() {
+const std::vector<PayloadInfo> &storageListDetailed() {
   if (s_metaCacheValid) return s_metaCache;
   s_metaCache.clear();
   for (const String &n : storageList()) {

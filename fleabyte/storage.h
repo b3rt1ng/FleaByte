@@ -13,7 +13,7 @@ struct PayloadInfo {
   String os;
 };
 
-std::vector<PayloadInfo> storageListDetailed();
+const std::vector<PayloadInfo> &storageListDetailed();
 bool storageExists(const String &name);
 String storageRead(const String &name);
 bool storageWrite(const String &name, const String &content);
