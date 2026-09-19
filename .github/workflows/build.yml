@@ -32,6 +32,17 @@ jobs:
           arduino-cli core install esp32:esp32
           arduino-cli lib install "Adafruit GFX Library" "Adafruit ST7735 and ST7789 Library"
 
+      - name: Check the tag matches the firmware version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          ver="$(sed -n 's/.*FIRMWARE_VERSION *"\([^"]*\)".*/\1/p' fleabyte/config.h)"
+          if [ "$tag" != "$ver" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match FIRMWARE_VERSION $ver" >&2
+            exit 1
+          fi
+          echo "tag and firmware agree on $ver"
+
       - name: Build release image
         run: ./tools/release.sh
 
