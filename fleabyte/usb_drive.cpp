@@ -36,6 +36,7 @@ static void unlockSd() {
 }
 
 static bool mountCardLocked();
+static bool remountLocked();
 static bool fsAvailableLocked();
 static void cardWatchTask(void *arg);
 
@@ -107,6 +108,13 @@ static bool mountCardLocked() {
   return false;
 }
 
+// begin() returns immediately when a card handle is already live, so a
+// genuine remount has to tear the mount down first.
+static bool remountLocked() {
+  SD_MMC.end();
+  return mountCardLocked();
+}
+
 static void publishGeometryLocked() {
   MSC.vendorID("LilyGO");
   MSC.productID(s_deviceName.c_str());
@@ -172,8 +180,24 @@ void usbDriveSetExposed(bool exposed) {
   lockSd();
   Serial.printf("[sd] setExposed(%d) from exposed=%d present=%d\n",
                 exposed, s_exposed, s_cardPresent);
-  s_exposed = exposed && s_cardPresent;
-  MSC.mediaPresent(s_exposed);
+
+  bool want = exposed && s_cardPresent;
+
+  // Media goes away first so the host is not reading across the remount.
+  s_exposed = false;
+  MSC.mediaPresent(false);
+
+  // Both directions remount. While the host held the volume it wrote raw
+  // sectors behind the filesystem layer, so the cached directory view is
+  // worthless afterwards, and reading it crashes the device rather than
+  // merely showing stale names.
+  if (s_cardPresent && remountLocked()) {
+    publishGeometryLocked();
+    if (want) {
+      s_exposed = true;
+      MSC.mediaPresent(true);
+    }
+  }
   unlockSd();
 }
 
@@ -221,15 +245,22 @@ bool usbDriveList(const String &path, std::vector<SdEntry> &out) {
     return false;
   }
 
+  // A filesystem the host rewrote can come back inconsistent. These caps
+  // make that show up as a short listing instead of an allocation on a
+  // nonsense length, which reboots the device.
+  const size_t MAX_ENTRIES = 256;
   File f = dir.openNextFile();
-  while (f) {
+  while (f && out.size() < MAX_ENTRIES) {
     String n = String(f.name());
     int slash = n.lastIndexOf('/');
     if (slash >= 0) n = n.substring(slash + 1);
-    out.push_back(SdEntry{n, (uint32_t)f.size(), f.isDirectory()});
+    if (!n.isEmpty() && n.length() <= 255) {
+      out.push_back(SdEntry{n, (uint32_t)f.size(), f.isDirectory()});
+    }
     f.close();
     f = dir.openNextFile();
   }
+  if (f) f.close();
   dir.close();
   unlockSd();
 
