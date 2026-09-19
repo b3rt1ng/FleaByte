@@ -76,8 +76,11 @@ void setup() {
 
   webBegin(g_ssid);
 
-  displayShowJoin(g_ssid, g_password);
-  g_joinLatched = true;
+  // Left up until a device joins, unless the operator would rather not
+  // leave the password and a scannable code on show. The button still
+  // reveals them, which needs the dongle in hand.
+  g_joinLatched = settings.showAccess;
+  if (g_joinLatched) displayShowJoin(g_ssid, g_password);
 }
 
 static void handleButton() {

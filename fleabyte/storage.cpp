@@ -368,6 +368,7 @@ Settings storageLoadSettings() {
   s.startDelay = 0;
   s.seedVersion = 0;
   s.usbDrive = false;
+  s.showAccess = true;
 
   File f = LittleFS.open(SETTINGS_FILE, "r");
   if (!f) return s;
@@ -414,6 +415,8 @@ Settings storageLoadSettings() {
     } else if (key == "devicename") {
 
       if (storageDeviceNameIsValid(value)) s.deviceName = value;
+    } else if (key == "showaccess") {
+      s.showAccess = (value.toInt() != 0);
     } else if (key == "usbdrive") {
       s.usbDrive = (value.toInt() != 0);
     } else if (key == "seedversion") {
@@ -464,6 +467,8 @@ bool storageSaveSettings(const Settings &s) {
   f.println(s.seedVersion);
   f.print("usbdrive=");
   f.println(s.usbDrive ? 1 : 0);
+  f.print("showaccess=");
+  f.println(s.showAccess ? 1 : 0);
   if (!s.deviceName.isEmpty()) {
     f.print("devicename=");
     f.println(s.deviceName);

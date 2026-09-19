@@ -5,6 +5,10 @@
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
 
+// Espressif ships a QR encoder inside the ESP32 core. Note that its
+// header wins over any library also called qrcode.h.
+#include <qrcode.h>
+
 static constexpr uint16_t rgb(uint8_t r, uint8_t g, uint8_t b) {
 #if TFT_SWAP_RED_BLUE
   return ((uint16_t)(b & 0xF8) << 8) | ((uint16_t)(g & 0xFC) << 3) | (r >> 3);
@@ -286,20 +290,100 @@ void displaySetLed(bool on, uint8_t r, uint8_t g, uint8_t b) {
   ledShow(s_ledR, s_ledG, s_ledB);
 }
 
+// The join payload both phone platforms understand. Backslash escapes are
+// required by the format, and a password containing a semicolon would
+// otherwise end the field early.
+static String wifiJoinPayload(const String &ssid, const String &password) {
+  auto esc = [](const String &in) {
+    String out;
+    out.reserve(in.length() + 4);
+    for (size_t i = 0; i < in.length(); i++) {
+      char c = in[i];
+      if (c == '\\' || c == ';' || c == ',' || c == ':' || c == '"') out += '\\';
+      out += c;
+    }
+    return out;
+  };
+  return "WIFI:T:WPA;S:" + esc(ssid) + ";P:" + esc(password) + ";;";
+}
+
+// Dark modules on a light card: the inverse is not reliably read, so this
+// block gives up the black background.
+//
+// The quiet zone is measured in modules, so it scales with them. Four is
+// the specified value and stays that way while it fits. A version 4 symbol
+// only reaches 74 px with two, which every scanner tested still reads, and
+// that is the difference between supporting longer credentials or not.
+static int16_t s_qrX = 0, s_qrY = 0;
+static bool s_qrDrawn = false;
+
+// The encoder hands the symbol to a callback and frees it on return, so
+// the drawing happens here rather than afterwards.
+static void qrDisplay(esp_qrcode_handle_t qr) {
+  const int size = esp_qrcode_get_size(qr);
+  const uint8_t scale = 2;
+  const uint8_t quiet = (size <= 29) ? 4 : 2;
+  const int16_t side = (size + quiet * 2) * scale;
+  const int16_t origin = quiet * scale;
+
+  tft.fillRect(s_qrX, s_qrY, side, side, 0xFFFF);
+  for (int row = 0; row < size; row++) {
+    for (int col = 0; col < size; col++) {
+      if (esp_qrcode_get_module(qr, col, row)) {
+        tft.fillRect(s_qrX + origin + col * scale, s_qrY + origin + row * scale,
+                     scale, scale, 0x0000);
+      }
+    }
+  }
+  s_qrDrawn = true;
+}
+
+static bool drawQrJoin(int16_t x, int16_t y, const String &payload) {
+  s_qrX = x;
+  s_qrY = y;
+  s_qrDrawn = false;
+
+  esp_qrcode_config_t cfg = {};
+  cfg.display_func = qrDisplay;
+  cfg.max_qrcode_version = 4;  // 33 modules, the most that fits in 80 px
+  cfg.qrcode_ecc_level = ESP_QRCODE_ECC_LOW;
+
+  return esp_qrcode_generate(&cfg, payload.c_str()) == ESP_OK && s_qrDrawn;
+}
+
 void displayShowJoin(const String &ssid, const String &password) {
   s_fullRepaint = true;
   s_splash = true;
   applyBacklight();
   tft.fillScreen(C_BG);
-  drawCorners(C_MAGENTA);
 
-  putText(14, 4, "//ACCESS", C_CYAN, 1);
-  tft.drawFastHLine(8, 15, screenW() - 16, C_DIM);
+  bool coded = drawQrJoin(3, 3, wifiJoinPayload(ssid, password));
 
-  putText(8, 22, "SSID", C_DIM, 1);
-  putText(8, 32, truncate(ssid, charsPerLine()), C_TEXT, 1);
-  putText(8, 48, "KEY", C_DIM, 1);
-  putText(8, 58, truncate(password, charsPerLine()), C_LIME, 1);
+  if (!coded) {
+    // Credentials too long for anything that fits in 80 px. Text only.
+    drawCorners(C_MAGENTA);
+    putText(14, 4, "//ACCESS", C_CYAN, 1);
+    tft.drawFastHLine(8, 15, screenW() - 16, C_DIM);
+    putText(8, 22, "SSID", C_DIM, 1);
+    putText(8, 32, truncate(ssid, charsPerLine()), C_TEXT, 1);
+    putText(8, 48, "KEY", C_DIM, 1);
+    putText(8, 58, truncate(password, charsPerLine()), C_LIME, 1);
+    ledShow(s_ledR, s_ledG, s_ledB);
+    return;
+  }
+
+  if (isLandscape()) {
+    putText(84, 8, "SCAN", C_CYAN, 1);
+    putText(84, 26, "SSID", C_DIM, 1);
+    putText(84, 36, truncate(ssid, 12), C_TEXT, 1);
+    putText(84, 52, "KEY", C_DIM, 1);
+    putText(84, 62, truncate(password, 12), C_LIME, 1);
+  } else {
+    putText(6, 86, "SSID", C_DIM, 1);
+    putText(6, 96, truncate(ssid, 12), C_TEXT, 1);
+    putText(6, 112, "KEY", C_DIM, 1);
+    putText(6, 122, truncate(password, 12), C_LIME, 1);
+  }
 
   ledShow(s_ledR, s_ledG, s_ledB);
 }

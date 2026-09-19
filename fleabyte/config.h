@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.1.2"
+#define FIRMWARE_VERSION "0.2.0"
 
 #define AP_SSID_PREFIX     "Fleabyte"
 #define AP_PASSWORD_PREFIX "flea-"

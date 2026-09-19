@@ -35,6 +35,7 @@ struct Settings {
   uint16_t seedVersion;
   bool usbDrive;
   String deviceName;
+  bool showAccess;
 };
 
 Settings storageLoadSettings();

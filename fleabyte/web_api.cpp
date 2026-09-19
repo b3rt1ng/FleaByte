@@ -223,6 +223,7 @@ static void handleSettingsGet() {
   json += "\"deviceName\":\"" + jsonEscape(s.deviceName.isEmpty()
               ? String(DEVICE_NAME_DEFAULT) : s.deviceName) + "\",";
   json += "\"deviceNameMax\":" + String(DEVICE_NAME_MAX) + ",";
+  json += "\"showAccess\":" + String(s.showAccess ? 1 : 0) + ",";
   UsbDriveStatus drv = usbDriveGetStatus();
   json += "\"usbDrive\":" + String(drv.exposed ? 1 : 0) + ",";
   json += "\"usbCard\":" + String(drv.cardPresent ? 1 : 0) + ",";
@@ -284,6 +285,7 @@ static void handleDisplaySave() {
   }
   if (server.hasArg("screen")) st.screenOn = (server.arg("screen").toInt() != 0);
   if (server.hasArg("led")) st.ledOn = (server.arg("led").toInt() != 0);
+  if (server.hasArg("showAccess")) st.showAccess = (server.arg("showAccess").toInt() != 0);
 
   if (server.hasArg("ledColor")) {
     String c = server.arg("ledColor");

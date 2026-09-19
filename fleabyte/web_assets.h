@@ -391,6 +391,11 @@ footer #ver{font:11.5px var(--mono)}
       </div>
 
       <div class="row">
+        <span class="lab">Show credentials at startup<small>The join screen displays the password and a scannable code until a device connects. The button on the dongle reveals them either way.</small></span>
+        <button class="switch" id="accesssw" role="switch" aria-checked="true" aria-label="Show credentials at startup"></button>
+      </div>
+
+      <div class="row">
         <span class="lab">Status LED<small>Still turns amber while a payload runs, and red on an error.</small></span>
         <button class="switch" id="ledsw" role="switch" aria-checked="true" aria-label="Status LED"></button>
       </div>
@@ -678,11 +683,13 @@ async function pollLog() {
 
 /* ---- settings ---- */
 let rotation = 1, screenOn = true, ledOn = true, ledColor = '#005A8C';
+let showAccess = true;
 
 function paintDisplay() {
   document.querySelectorAll('.orient button').forEach(b =>
     b.setAttribute('aria-checked', +b.dataset.rot === rotation));
   $('#screensw').setAttribute('aria-checked', screenOn);
+  $('#accesssw').setAttribute('aria-checked', showAccess);
   $('#ledsw').setAttribute('aria-checked', ledOn);
   $('#ledcolorrow').hidden = !ledOn;
   const up = ledColor.toUpperCase();
@@ -700,6 +707,7 @@ document.querySelectorAll('.orient button').forEach(b => b.onclick = () => {
   rotation = +b.dataset.rot; paintDisplay();
 });
 $('#screensw').onclick = () => { screenOn = !screenOn; paintDisplay(); };
+$('#accesssw').onclick = () => { showAccess = !showAccess; paintDisplay(); };
 
 let usbDrive = false, sdPath = '/';
 
@@ -806,7 +814,8 @@ $('#savedisplay').onclick = async () => {
   st.className = 'status';
   try {
     await api('/api/settings/display', form({
-      rotation, screen: screenOn ? 1 : 0, led: ledOn ? 1 : 0, ledColor
+      rotation, screen: screenOn ? 1 : 0, led: ledOn ? 1 : 0, ledColor,
+      showAccess: showAccess ? 1 : 0
     }));
     st.className = 'status ok';
     st.textContent = 'Applied';
@@ -823,6 +832,7 @@ async function loadSettings() {
     layouts = s.layouts || layouts;
     rotation = s.rotation;
     screenOn = !!s.screen;
+    showAccess = !!s.showAccess;
     ledOn = !!s.led;
     ledColor = s.ledColor;
     if (document.activeElement !== $('#delay')) $('#delay').value = s.startDelay;
