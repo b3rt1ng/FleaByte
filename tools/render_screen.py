@@ -171,7 +171,7 @@ def access(ssid, password):
 
 
 if __name__ == "__main__":
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "docs/screens")
+    out = Path(sys.argv[1] if len(sys.argv) > 1 else "screens")
     out.mkdir(parents=True, exist_ok=True)
 
     access("Fleabyte-8218", "flea-A0058218").save(out / "screen-access.png")

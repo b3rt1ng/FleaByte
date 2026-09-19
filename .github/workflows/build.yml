@@ -8,8 +8,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -45,18 +43,6 @@ jobs:
             release/firmware.bin
             release/firmware.bin.sha256
 
-      - name: Stage web flasher
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          cp release/firmware.bin release/manifest.json docs/
-          echo "Flash page staged with $(du -h docs/firmware.bin | cut -f1) image"
-
-      - name: Upload Pages artifact
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
-
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -64,20 +50,3 @@ jobs:
           files: |
             release/firmware.bin
             release/firmware.bin.sha256
-
-  pages:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    # The web flasher is a convenience. Pages needs a public repository on
-    # the free plan, so a failure here must not fail the release.
-    continue-on-error: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - id: deploy
-        uses: actions/deploy-pages@v4

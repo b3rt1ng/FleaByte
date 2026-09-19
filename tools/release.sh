@@ -31,20 +31,6 @@ fi
 
 VERSION="$(sed -n 's/.*FIRMWARE_VERSION *"\([^"]*\)".*/\1/p' "$ROOT/$SKETCH/config.h")"
 
-cat > "$OUT/manifest.json" <<JSON
-{
-  "name": "Fleabyte",
-  "version": "${VERSION}",
-  "new_install_prompt_erase": false,
-  "builds": [
-    {
-      "chipFamily": "ESP32-S3",
-      "parts": [{ "path": "firmware.bin", "offset": 0 }]
-    }
-  ]
-}
-JSON
-
 ( cd "$OUT" && sha256sum firmware.bin > firmware.bin.sha256 )
 
 echo

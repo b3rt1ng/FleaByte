@@ -8,7 +8,7 @@ page, pick the keyboard layout of the machine it is plugged into, write or
 select a script, and run it. The screen shows the network, how many devices
 are connected, and what the dongle is doing.
 
-![Fleabyte status screen](docs/screens/screen-idle.png)
+![Fleabyte status screen](screens/screen-idle.png)
 
 ## What it does
 
@@ -26,7 +26,7 @@ progress of a running payload.
 
 | | |
 |---|---|
-| ![Access](docs/screens/screen-access.png) | ![Running](docs/screens/screen-running.png) |
+| ![Access](screens/screen-access.png) | ![Running](screens/screen-running.png) |
 | Waiting for the first connection | Running a payload |
 
 ## Scope of use
@@ -64,9 +64,6 @@ esptool --chip esp32s3 --port /dev/ttyACM0 write-flash 0x0 firmware.bin
 Hold the button while plugging the dongle in to put it in the bootloader
 first, then release. The image stops before the filesystem partition, so an
 update keeps saved payloads and settings.
-
-A browser flasher is published alongside each release if you would rather
-not install anything.
 
 ## Building
 
@@ -202,7 +199,7 @@ live.
 | `web_assets.h` | Web interface, compiled into the firmware |
 | `partitions.csv` | 16 MB layout, 4 MB app, 7.88 MB filesystem |
 | `tools/` | Build, flash, release and screen rendering scripts |
-| `docs/` | Browser flasher published to GitHub Pages |
+| `screens/` | Rendered screen images used by this page |
 
 Payloads run in their own FreeRTOS task, which keeps the web server
 answering during a run and makes the progress readout and *Stop* work.
