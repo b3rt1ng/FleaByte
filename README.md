@@ -50,15 +50,17 @@ only the S2, S3 and P4 can do this at all.
 
 ## Installing
 
-Prebuilt images are attached to each [release](../../releases). One file,
-flashed at offset `0x0`:
+**[Flash it from your browser](https://b3rt1ng.github.io/FleaByte/)**, in
+Chrome or Edge on a desktop. Nothing to install: hold the button while
+plugging the dongle in, click Install, pick the serial port.
+
+Or take the image from a [release](../../releases) and write it yourself:
 
 ```sh
 esptool --chip esp32s3 --port /dev/ttyACM0 write-flash 0x0 firmware.bin
 ```
 
-Hold the button while plugging the dongle in to reach the bootloader, then
-release. The image stops before the filesystem partition, so an update
+Either way the image stops before the filesystem partition, so an update
 keeps saved payloads and settings.
 
 ## Documentation
