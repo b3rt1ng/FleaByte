@@ -39,6 +39,15 @@ plug-in, and the button on the dongle never starts a payload.
 A LilyGO T-Dongle S3 and nothing else. A microSD card is optional, and only
 used by the USB drive feature.
 
+* [LilyGO store](https://lilygo.cc/products/t-dongle-s3)
+* [Amazon](https://www.amazon.fr/dp/B0BK9162QY)
+* [Alibaba](https://www.alibaba.com/pla/LILYGO-T-Dongle-S3-ESP32-S3-Development-Board-096_1601590830049.html)
+
+It has to be the **S3**. LilyGO also sells a T-Dongle C5, and the ESP32-C5
+has no USB OTG controller: it can only present a serial port, never a
+keyboard. The same goes for the C3, C6 and H2. Among the parts LilyGO uses,
+only the S2, S3 and P4 can do this at all.
+
 ## Installing
 
 Prebuilt images are attached to each [release](../../releases). One file,

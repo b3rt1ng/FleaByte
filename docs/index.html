@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flash Fleabyte</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+:root{
+  --bg:#FAFAF7; --card:#FFFFFF; --line:#EAEAE4;
+  --ink:#1A1D1B; --muted:#6E7671; --faint:#9AA29C; --accent:#5E8C61;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.6 var(--sans);
+  display:grid;place-items:center;min-height:100vh;padding:2rem 1.25rem;
+}
+main{max-width:34rem;width:100%}
+h1{font-size:30px;font-weight:600;letter-spacing:-.02em;margin:0 0 .4rem}
+p{color:var(--muted);margin:0 0 1rem}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:1.5rem;margin-top:1.5rem;
+  box-shadow:0 1px 2px rgba(26,29,27,.04),0 2px 8px rgba(26,29,27,.05);
+}
+esp-web-install-button{--esp-tools-button-color:#fff;--esp-tools-button-text-color:#fff}
+esp-web-install-button::part(button){
+  background:var(--accent);color:#fff;border:none;
+  padding:.7rem 1.4rem;border-radius:999px;
+  font:600 15px var(--sans);cursor:pointer;
+}
+.unsupported{color:#B3453C}
+ol{padding-left:1.2rem;color:var(--muted);margin:0}
+li{margin:.4rem 0}
+code{font:13.5px var(--mono);background:var(--bg);padding:.12rem .4rem;border-radius:5px;color:var(--ink)}
+.manual{margin-top:1.5rem;font-size:14px}
+.manual summary{cursor:pointer;color:var(--accent);font-weight:500}
+pre{
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  padding:.9rem;overflow-x:auto;font:13px/1.6 var(--mono);color:var(--ink);
+}
+footer{margin-top:2rem;color:var(--faint);font-size:13px}
+.progress{height:6px;border-radius:999px;background:var(--bg);overflow:hidden;margin:1rem 0 .6rem}
+.progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+#log{
+  margin:0;padding:.85rem;max-height:220px;overflow:auto;
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  font:12.5px/1.7 var(--mono);color:var(--muted);white-space:pre-wrap;
+}
+#log .err{color:#B3453C}
+#log .ok{color:var(--accent)}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Fleabyte</h1>
+  <p>Flash the firmware onto a LilyGO T-Dongle S3 straight from this page.
+  Works in Chrome and Edge on desktop.</p>
+
+  <div class="card">
+    <ol>
+      <li>Hold the button on the dongle while plugging it in, then release.</li>
+      <li>Click Install and pick the serial port that appears.</li>
+      <li>When it finishes, unplug and replug without touching the button.</li>
+    </ol>
+    <p style="margin:1.2rem 0 0">
+      <esp-web-install-button manifest="manifest.json">
+        <button slot="activate">Install</button>
+        <span slot="unsupported" class="unsupported">
+          This browser cannot talk to serial ports. Use Chrome or Edge on a desktop.
+        </span>
+        <span slot="not-allowed" class="unsupported">
+          This page has to be served over HTTPS.
+        </span>
+      </esp-web-install-button>
+    </p>
+
+    <div id="report" hidden>
+      <div class="progress"><span id="bar"></span></div>
+      <pre id="log"></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <p style="margin:0 0 .6rem;color:var(--ink);font-weight:600">After flashing</p>
+    <p style="margin:0">The screen shows a network name and password, both
+    derived from the device MAC. Join that network and the page opens by
+    itself, or go to <code>http://192.168.4.1</code>.</p>
+  </div>
+
+  <details class="manual">
+    <summary>Flash from a terminal instead</summary>
+    <pre>esptool --chip esp32s3 --port /dev/ttyACM0 write-flash 0x0 firmware.bin</pre>
+    <p style="margin:.6rem 0 0">The image stops before the filesystem
+    partition, so saved payloads and settings survive an update.</p>
+  </details>
+
+  <footer>
+    Machines you own, or for which you hold written authorisation.
+    <a href="https://github.com/b3rt1ng/FleaByte">Source and documentation</a>.
+  </footer>
+</main>
+
+<script>
+// ESP Web Tools reports every phase through state-changed. Without this the
+// page shows a spinner and nothing else, which is unnerving when a flash
+// takes half a minute.
+(function () {
+  const btn = document.querySelector('esp-web-install-button');
+  const report = document.getElementById('report');
+  const log = document.getElementById('log');
+  const bar = document.getElementById('bar');
+  let writingLine = null;
+
+  const stamp = () => new Date().toTimeString().slice(0, 8);
+
+  function line(text, cls) {
+    const el = document.createElement('div');
+    if (cls) el.className = cls;
+    el.textContent = '[' + stamp() + '] ' + text;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+    return el;
+  }
+
+  btn.addEventListener('state-changed', (ev) => {
+    const { state, message, details } = ev.detail;
+    report.hidden = false;
+
+    if (state === 'writing' && details && typeof details.percentage === 'number') {
+      const pct = Math.round(details.percentage);
+      bar.style.width = pct + '%';
+      const text = 'writing ' + pct + '%'
+        + (details.bytesWritten ? ' (' + (details.bytesWritten / 1024 / 1024).toFixed(2) + ' MB)' : '');
+      if (writingLine) {
+        writingLine.textContent = '[' + stamp() + '] ' + text;
+      } else {
+        writingLine = line(text);
+      }
+      return;
+    }
+
+    writingLine = null;
+    if (state === 'finished') {
+      bar.style.width = '100%';
+      line(message || 'finished', 'ok');
+      line('Unplug and replug without touching the button.', 'ok');
+    } else if (state === 'error') {
+      line((message || 'error'), 'err');
+    } else {
+      line(state + (message ? ': ' + message : ''));
+    }
+  });
+})();
+</script>
+</body>
+</html>
