@@ -27,6 +27,12 @@ void duckyAbort();
 DuckyStatus duckyGetStatus();
 bool duckyIsRunning();
 
+// True once the host has sent a keyboard LED report, which it does on
+// enumeration and whenever a lock key changes. It is the only signal the
+// device gets that the other end has finished enumerating and is
+// listening, rather than a guess dressed up as a delay.
+bool duckyHostSeen();
+
 bool duckySetLayout(const String &code);
 String duckyGetLayout();
 

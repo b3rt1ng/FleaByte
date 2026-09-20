@@ -32,6 +32,7 @@ static const char *DEMO_REFERENCE =
   "STRINGLN STRING text           types the text\n"
   "STRINGLN STRINGLN text         types the text, then Enter\n"
   "STRINGLN DELAY 500             waits 500 ms\n"
+  "STRINGLN WAIT_FOR_HOST 5000    waits for the host to enumerate\n"
   "STRINGLN DEFAULTDELAY 50       pause after every line\n"
   "STRINGLN DEFAULTCHARDELAY 20   pause between characters\n"
   "STRINGLN LAYOUT <code>          switches layout mid-script\n"

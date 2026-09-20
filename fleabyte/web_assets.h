@@ -130,6 +130,10 @@ textarea:focus{outline:none;border-color:var(--accent);background:#fff}
   padding:.42rem .6rem;font:13.5px var(--sans);text-align:center;
 }
 .delay input:focus{outline:none;border-color:var(--accent);background:#fff}
+.host{display:flex;align-items:center;gap:.4rem;font-size:13px;color:var(--faint)}
+.host .hdot{width:7px;height:7px;border-radius:50%;background:#DEDED8;flex:none}
+.host.ready{color:var(--muted)}
+.host.ready .hdot{background:var(--accent)}
 .status{margin-left:auto;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .status.err{color:var(--danger)}
 .status.ok{color:var(--accent)}
@@ -340,7 +344,8 @@ footer #ver{font:11.5px var(--mono)}
         <div class="runbar">
           <button class="btn" id="run">Run</button>
           <button class="btn ghost stop" id="stop" disabled>Stop</button>
-          <label class="delay">Start after
+          <span class="host" id="host"><span class="hdot"></span><span id="hostlab">No host yet</span></span>
+        <label class="delay">Start after
             <input type="number" id="delay" min="0" max="3600" step="1" value="0"
                    aria-label="Seconds before the payload starts">
             s
@@ -881,6 +886,8 @@ function paintState(s) {
   runBtn.disabled = busy;
   stopBtn.disabled = !busy;
   $('#delay').disabled = busy;
+  $('#host').className = 'host' + (s.hostSeen ? ' ready' : '');
+  $('#hostlab').textContent = s.hostSeen ? 'Host ready' : 'No host yet';
   $('#dot').className = 'dot ' + (busy ? 'busy' : 'on');
 
   status.className = 'status' + (s.state === 'error' ? ' err' : s.state === 'done' ? ' ok' : '');

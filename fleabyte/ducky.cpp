@@ -54,6 +54,7 @@ bool duckyLayoutExists(const String &code) { return findLayout(code) != nullptr;
 static QueueHandle_t g_queue = nullptr;
 static SemaphoreHandle_t g_mutex = nullptr;
 static volatile bool g_abort = false;
+static volatile bool g_hostSeen = false;
 
 static DuckyState g_state = DUCKY_IDLE;
 static int g_line = 0;
@@ -309,6 +310,24 @@ static bool executeLine(const String &raw, String &err) {
     return duckySleep((uint32_t)v.toInt());
   }
 
+  // Best effort by nature: a host that never touches a lock key may never
+  // send the report, so a timeout carries on rather than failing the run.
+  if (cmdUpper == "WAIT_FOR_HOST" || cmdUpper == "WAITFORHOST") {
+    String v = rest;
+    v.trim();
+    uint32_t budget = v.isEmpty() ? 5000 : (uint32_t)v.toInt();
+    uint32_t start = millis();
+    while (!g_hostSeen && (millis() - start) < budget) {
+      if (!duckySleep(20)) return false;
+    }
+    if (g_hostSeen) {
+      logLine("  host ready after " + String(millis() - start) + "ms");
+    } else {
+      logLine("  ! no host report in " + String(budget) + "ms, continuing");
+    }
+    return true;
+  }
+
   if (cmdUpper == "DEFAULTDELAY" || cmdUpper == "DEFAULT_DELAY") {
     g_defaultDelay = (uint32_t)rest.toInt();
     return true;
@@ -465,10 +484,21 @@ static void duckyTask(void *arg) {
   }
 }
 
+static void onKeyboardLeds(void *arg, esp_event_base_t base, int32_t id, void *data) {
+  (void)arg;
+  (void)data;
+  if (base == ARDUINO_USB_HID_KEYBOARD_EVENTS && id == ARDUINO_USB_HID_KEYBOARD_LED_EVENT) {
+    g_hostSeen = true;
+  }
+}
+
+bool duckyHostSeen() { return g_hostSeen; }
+
 void duckyBegin() {
   g_mutex = xSemaphoreCreateMutex();
   g_queue = xQueueCreate(1, sizeof(char *));
   Keyboard.begin(KeyboardLayout_en_US);
+  Keyboard.onEvent(onKeyboardLeds);
   xTaskCreatePinnedToCore(duckyTask, "ducky", 8192, nullptr, 2, nullptr, 1);
 }
 

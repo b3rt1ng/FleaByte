@@ -79,6 +79,7 @@ static void handleState() {
   json += "\"line\":" + String(st.line) + ",";
   json += "\"total\":" + String(st.total) + ",";
   json += "\"countdown\":" + String(st.countdown) + ",";
+  json += "\"hostSeen\":" + String(duckyHostSeen() ? 1 : 0) + ",";
   json += "\"message\":\"" + jsonEscape(st.message) + "\",";
 
   json += "\"payloads\":[";
