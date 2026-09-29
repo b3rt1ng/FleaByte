@@ -33,6 +33,26 @@ static String defaultSsid() {
   return String(AP_SSID_PREFIX) + "-" + suffix;
 }
 
+// One shot: the setting is cleared and written back before the payload is
+// queued, so a crash or a replug mid-run cannot turn a single arming into a
+// payload that fires on every plug.
+static void launchOnPlug(Settings &settings) {
+  if (settings.launchOnPlug.isEmpty()) return;
+
+  String name = settings.launchOnPlug;
+  settings.launchOnPlug = "";
+  settings.layout = duckyGetLayout();
+  storageSaveSettings(settings);
+
+  if (!storageExists(name)) {
+    duckyLog("== launch on plug: " + name + " is gone, disarmed ==");
+    return;
+  }
+
+  duckyLog("== launch on plug: " + name + " ==");
+  duckyRun(storageRead(name), name, settings.startDelay);
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -61,7 +81,8 @@ void setup() {
 
   displaySetRotation(settings.rotation);
   displaySetScreenOn(settings.screenOn);
-  displaySetLed(settings.ledOn, settings.ledR, settings.ledG, settings.ledB);
+  displaySetLed(settings.ledOn);
+  displaySetWaiting(true);
 
   usbDriveBegin(settings.usbDrive, settings.deviceName);
 
@@ -81,6 +102,8 @@ void setup() {
   // reveals them, which needs the dongle in hand.
   g_joinLatched = settings.showAccess;
   if (g_joinLatched) displayShowJoin(g_ssid, g_password);
+
+  launchOnPlug(settings);
 }
 
 static void handleButton() {
@@ -133,6 +156,8 @@ void loop() {
     info.sdExposed = drv.exposed;
     info.clients = WiFi.softAPgetStationNum();
     info.ducky = duckyGetStatus();
+
+    displaySetWaiting(info.clients == 0);
 
     if (info.clients > 0 || duckyIsRunning()) g_joinLatched = false;
 

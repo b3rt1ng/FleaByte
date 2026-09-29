@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.3.1"
+#define FIRMWARE_VERSION "0.4.0"
 
 #define AP_SSID_PREFIX     "Fleabyte"
 #define AP_PASSWORD_PREFIX "flea-"
@@ -52,9 +52,25 @@
 
 #define FACTORY_RESET_HOLD_MS 5000
 
-#define LED_DEFAULT_R 0x00
-#define LED_DEFAULT_G 0x5A
-#define LED_DEFAULT_B 0x8C
+// The LED reports state rather than taste, so the colours are fixed.
+// Standby blue, red while waiting for a device or running, green once a
+// payload lands.
+#define LED_STANDBY_R 0x00
+#define LED_STANDBY_G 0x28
+#define LED_STANDBY_B 0xC8
+#define LED_DONE_R    0x00
+#define LED_DONE_G    0xC8
+#define LED_DONE_B    0x3C
+
+#define LED_BREATH_WAIT_MS 2200
+#define LED_BREATH_RUN_MS  700
+#define LED_OUTCOME_MS     5000
+
+// Colours never cut over. Half of this fades the old one out, half fades the
+// new one in, so green to blue dips through black instead of through the
+// muddy teals a straight interpolation would cross.
+#define LED_FADE_MS  420
+#define LED_FRAME_MS 16
 
 #define SCREEN_WAKE_MS 8000
 

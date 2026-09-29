@@ -32,7 +32,17 @@ static Adafruit_ST7735 tft(&tftSPI, TFT_CS, TFT_DC, TFT_RST);
 static uint8_t s_rotation = TFT_ROTATION;
 static bool s_screenOn = true;
 static bool s_ledOn = true;
-static uint8_t s_ledR = LED_DEFAULT_R, s_ledG = LED_DEFAULT_G, s_ledB = LED_DEFAULT_B;
+static bool s_ledWaiting = false;
+static bool s_ledFault = false;
+static uint32_t s_ledHoldUntil = 0;
+static uint32_t s_nextLedFrame = 0;
+
+enum LedPhase : uint8_t { LED_PH_STEADY, LED_PH_OUT, LED_PH_IN };
+static LedPhase s_ledPhase = LED_PH_IN;
+static uint32_t s_ledPhaseAt = 0;
+static uint8_t s_ledKey = 255;
+static uint8_t s_curR = 0, s_curG = 0, s_curB = 0;
+static uint8_t s_fromR = 0, s_fromG = 0, s_fromB = 0;
 static uint32_t s_wakeUntil = 0;
 static bool s_backlightLit = true;
 static bool s_fullRepaint = true;
@@ -50,7 +60,15 @@ static void apa102Byte(uint8_t b) {
   }
 }
 
-void ledSet(uint8_t r, uint8_t g, uint8_t b) {
+static void ledSet(uint8_t r, uint8_t g, uint8_t b) {
+  // Standby holds one colour for minutes on end, and the frame clock would
+  // otherwise bit-bang the same 12 bytes forty times a second.
+  static uint8_t lastR = 1, lastG = 1, lastB = 1;
+  if (r == lastR && g == lastG && b == lastB) return;
+  lastR = r;
+  lastG = g;
+  lastB = b;
+
   for (int i = 0; i < 4; i++) apa102Byte(0x00);
   apa102Byte(0xE0 | (LED_BRIGHTNESS & 0x1F));
   apa102Byte(b);
@@ -59,12 +77,16 @@ void ledSet(uint8_t r, uint8_t g, uint8_t b) {
   for (int i = 0; i < 4; i++) apa102Byte(0xFF);
 }
 
-static void ledShow(uint8_t r, uint8_t g, uint8_t b) {
-  if (!s_ledOn) {
-    ledSet(0, 0, 0);
-    return;
-  }
-  ledSet(r, g, b);
+// Perceived brightness is far from linear, so the triangle gets squared.
+// Ramping the raw value instead reads as a hard corner at each end rather
+// than a breath.
+static uint8_t breathe(uint32_t now, uint16_t period) {
+  uint32_t half = period / 2;
+  uint32_t phase = now % period;
+  uint32_t tri = (phase < half) ? (phase * 255 / half)
+                                : ((period - phase) * 255 / half);
+  if (tri > 255) tri = 255;
+  return (uint8_t)((tri * tri) / 255);
 }
 
 static void applyBacklight() {
@@ -282,13 +304,11 @@ void displayWake() {
   applyBacklight();
 }
 
-void displaySetLed(bool on, uint8_t r, uint8_t g, uint8_t b) {
-  s_ledOn = on;
-  s_ledR = r;
-  s_ledG = g;
-  s_ledB = b;
-  ledShow(s_ledR, s_ledG, s_ledB);
-}
+// No direct write: switching off is a state change like any other, so it
+// fades out through the same path instead of cutting to black.
+void displaySetLed(bool on) { s_ledOn = on; }
+
+void displaySetWaiting(bool waiting) { s_ledWaiting = waiting; }
 
 // The join payload both phone platforms understand. Backslash escapes are
 // required by the format, and a password containing a semicolon would
@@ -378,7 +398,6 @@ void displayShowJoin(const String &ssid, const String &password) {
     putText(8, 32, truncate(ssid, charsPerLine()), C_TEXT, 1);
     putText(8, 48, "KEY", C_DIM, 1);
     putText(8, 58, truncate(password, charsPerLine()), C_LIME, 1);
-    ledShow(s_ledR, s_ledG, s_ledB);
     return;
   }
 
@@ -395,8 +414,6 @@ void displayShowJoin(const String &ssid, const String &password) {
     putText(6, 118, "KEY", C_DIM, 1);
     putWrapped(6, 128, password, C_LIME, 12);
   }
-
-  ledShow(s_ledR, s_ledG, s_ledB);
 }
 
 void displayShowMessage(const String &title, const String &detail) {
@@ -410,8 +427,6 @@ void displayShowMessage(const String &title, const String &detail) {
   tft.drawFastHLine(8, 15, screenW() - 16, C_DIM);
   putText(8, 30, truncate(title, charsPerLine()), C_TEXT, 1);
   putText(8, 44, truncate(detail, charsPerLine()), C_DIM, 1);
-
-  ledShow(255, 140, 0);
 }
 
 static String s_arrangement, s_name;
@@ -473,19 +488,22 @@ void displayUpdate(const DisplayInfo &info) {
   }
   setField(F_STATE, state, color);
 
+  // The outcome is held for a few seconds on the way past, because a run
+  // that ends in well under a second would otherwise never be seen.
+  if (info.ducky.state != s_duckyState) {
+    if (info.ducky.state == DUCKY_DONE || info.ducky.state == DUCKY_ERROR) {
+      s_ledFault = (info.ducky.state == DUCKY_ERROR);
+      s_ledHoldUntil = millis() + LED_OUTCOME_MS;
+    } else {
+      s_ledHoldUntil = 0;
+    }
+  }
+
   s_duckyState = info.ducky.state;
   s_line = info.ducky.line;
   s_total = info.ducky.total;
   s_running = (info.ducky.state == DUCKY_RUNNING);
   s_armed = (info.ducky.state == DUCKY_ARMED);
-
-  switch (info.ducky.state) {
-    case DUCKY_ARMED:   ledShow(255, 45, 138); break;
-    case DUCKY_RUNNING: ledShow(255, 170, 0); break;
-    case DUCKY_ERROR:   ledShow(255, 0, 0); break;
-    case DUCKY_DONE:    ledShow(0, 180, 90); break;
-    default:            ledShow(s_ledR, s_ledG, s_ledB); break;
-  }
 }
 
 static uint32_t s_nextFrame = 0;
@@ -516,7 +534,102 @@ static void clearProgress() {
   tft.fillRect(x, y, w, 4, C_BG);
 }
 
+enum LedKey : uint8_t {
+  K_OFF, K_FAULT, K_DONE, K_ACTIVE, K_WAITING, K_STANDBY
+};
+
+static uint8_t ledKey() {
+  if (!s_ledOn) return K_OFF;
+  if (s_ledHoldUntil) return s_ledFault ? K_FAULT : K_DONE;
+  if (s_running || s_armed) return K_ACTIVE;
+  if (s_ledWaiting) return K_WAITING;
+  return K_STANDBY;
+}
+
+// What the state wants to show right now. Breathing states are time-varying,
+// so this is recomputed every frame rather than cached per state.
+static void ledTarget(uint32_t now, uint8_t key,
+                      uint8_t &r, uint8_t &g, uint8_t &b) {
+  r = g = b = 0;
+  switch (key) {
+    case K_FAULT:   r = 255; break;
+    case K_DONE:    r = LED_DONE_R; g = LED_DONE_G; b = LED_DONE_B; break;
+    case K_ACTIVE:  r = breathe(now, LED_BREATH_RUN_MS); break;
+    case K_WAITING: r = breathe(now, LED_BREATH_WAIT_MS); break;
+    case K_STANDBY: r = LED_STANDBY_R; g = LED_STANDBY_G; b = LED_STANDBY_B; break;
+    default: break;
+  }
+}
+
+static uint8_t scale(uint8_t v, uint8_t k) { return (uint8_t)((v * k) / 255); }
+
+// Same squared curve as the breath. A ramp that is linear in value reads as
+// holding bright then dropping off a cliff, which would make the fades feel
+// unlike the pulsing they sit between.
+static uint8_t ease(uint32_t t, uint32_t span) {
+  uint32_t k = (t >= span) ? 255 : (t * 255 / span);
+  return (uint8_t)((k * k) / 255);
+}
+
+static void ledEmit(uint8_t r, uint8_t g, uint8_t b) {
+  s_curR = r;
+  s_curG = g;
+  s_curB = b;
+  ledSet(r, g, b);
+}
+
+// Runs ahead of the splash guard: the access screen is exactly when the
+// operator most wants to see the dongle is still waiting.
+static void ledTick() {
+  uint32_t now = millis();
+  if (now < s_nextLedFrame) return;
+  s_nextLedFrame = now + LED_FRAME_MS;
+
+  if (s_ledHoldUntil && now >= s_ledHoldUntil) s_ledHoldUntil = 0;
+
+  uint8_t key = ledKey();
+  if (key != s_ledKey) {
+    // Leave from whatever is actually lit, not from what the old state
+    // would compute now: a breath we are leaving has already moved on.
+    s_fromR = s_curR;
+    s_fromG = s_curG;
+    s_fromB = s_curB;
+    s_ledKey = key;
+    s_ledPhase = LED_PH_OUT;
+    s_ledPhaseAt = now;
+  }
+
+  const uint32_t half = LED_FADE_MS / 2;
+  uint8_t r, g, b;
+
+  if (s_ledPhase == LED_PH_OUT) {
+    uint32_t t = now - s_ledPhaseAt;
+    if (t < half) {
+      uint8_t k = ease(half - t, half);
+      ledEmit(scale(s_fromR, k), scale(s_fromG, k), scale(s_fromB, k));
+      return;
+    }
+    s_ledPhase = LED_PH_IN;
+    s_ledPhaseAt = now;
+  }
+
+  ledTarget(now, s_ledKey, r, g, b);
+
+  if (s_ledPhase == LED_PH_IN) {
+    uint32_t t = now - s_ledPhaseAt;
+    if (t < half) {
+      uint8_t k = ease(t, half);
+      ledEmit(scale(r, k), scale(g, k), scale(b, k));
+      return;
+    }
+    s_ledPhase = LED_PH_STEADY;
+  }
+
+  ledEmit(r, g, b);
+}
+
 void displayTick() {
+  ledTick();
   if (s_splash) return;
 
   uint32_t now = millis();

@@ -119,14 +119,52 @@ whatever the mount error.
 
 ## Settings
 
-Layout, device name, screen orientation and backlight, LED colour, Wi-Fi
-credentials, USB drive. Stored on internal flash and kept across reflashing,
-since the firmware goes to `app0` while settings live on the `spiffs`
-partition.
+Layout, device name, screen orientation and backlight, status light on or
+off, Wi-Fi credentials, USB drive. Stored on internal flash and kept across
+reflashing, since the firmware goes to `app0` while settings live on the
+`spiffs` partition.
 
 Changing the Wi-Fi credentials restarts the dongle, because the network
 being reconfigured is the one carrying the request. Everything else applies
 live.
+
+## Status light
+
+The colours are fixed and report state rather than taste. Only on or off is
+configurable.
+
+| Light | Meaning |
+|---|---|
+| Red, slow breath | No device has joined the access point yet |
+| Blue, steady | Standby |
+| Red, fast pulse | A payload is armed or running |
+| Green, 5 seconds | The payload finished, then back to standby |
+| Red, steady 5 seconds | The payload stopped on an error |
+
+Colours never cut over. Each change fades the old one out and the new one
+in, dipping through black rather than crossing the muddy hues a direct
+interpolation would pass through. Both the fades and the breathing use the
+same squared curve, since perceived brightness is far from linear and a ramp
+that is linear in value reads as a cliff at one end.
+
+## Fire after boot
+
+Arms one payload to run at the next power-up, from the fold under the
+payload library. It is a single shot: the firmware clears the setting and
+writes it back *before* queueing the payload, so a crash or a replug during
+the run cannot turn one arming into a payload that fires on every plug.
+Every other setting is kept.
+
+The badge on the fold shows what is armed, so it is visible without
+expanding it.
+
+Nothing else runs on plug-in, and the button on the dongle never starts a
+payload.
+
+At power-up the host has usually not finished setting the keyboard up, and
+anything typed before that is lost. Start the script with `WAIT_FOR_HOST`,
+or give it a start delay, which doubles as the window to pull the dongle
+back out.
 
 ## Repository layout
 

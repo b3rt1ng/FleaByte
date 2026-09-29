@@ -363,9 +363,6 @@ Settings storageLoadSettings() {
   s.rotation = TFT_ROTATION;
   s.screenOn = true;
   s.ledOn = true;
-  s.ledR = LED_DEFAULT_R;
-  s.ledG = LED_DEFAULT_G;
-  s.ledB = LED_DEFAULT_B;
   s.startDelay = 0;
   s.seedVersion = 0;
   s.usbDrive = false;
@@ -426,18 +423,23 @@ Settings storageLoadSettings() {
     } else if (key == "startdelay") {
       long d = value.toInt();
       if (d >= 0 && d <= START_DELAY_MAX) s.startDelay = (uint16_t)d;
-    } else if (key == "ledcolor") {
-
+    } else if (key == "launchonplug") {
       value.trim();
-      if (value.length() == 6) {
-        long v = strtol(value.c_str(), nullptr, 16);
-        s.ledR = (v >> 16) & 0xFF;
-        s.ledG = (v >> 8) & 0xFF;
-        s.ledB = v & 0xFF;
-      }
+      if (storageNameIsValid(value)) s.launchOnPlug = value;
     }
   }
   return s;
+}
+
+static String s_launchCache;
+static bool s_launchCached = false;
+
+String storageLaunchOnPlug() {
+  if (!s_launchCached) {
+    s_launchCache = storageLoadSettings().launchOnPlug;
+    s_launchCached = true;
+  }
+  return s_launchCache;
 }
 
 bool storageSaveSettings(const Settings &s) {
@@ -474,14 +476,19 @@ bool storageSaveSettings(const Settings &s) {
     f.print("devicename=");
     f.println(s.deviceName);
   }
-  char color[8];
-  snprintf(color, sizeof(color), "%02X%02X%02X", s.ledR, s.ledG, s.ledB);
-  f.print("ledcolor=");
-  f.println(color);
+  if (!s.launchOnPlug.isEmpty()) {
+    f.print("launchonplug=");
+    f.println(s.launchOnPlug);
+  }
   f.close();
+
+  s_launchCache = s.launchOnPlug;
+  s_launchCached = true;
   return true;
 }
 
 void storageResetSettings() {
   LittleFS.remove(SETTINGS_FILE);
+  s_launchCache = "";
+  s_launchCached = true;
 }

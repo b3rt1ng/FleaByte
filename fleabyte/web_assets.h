@@ -91,6 +91,37 @@ main{max-width:880px;margin:0 auto;padding:1.75rem 1.25rem 0}
 .files button[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .blank{padding:.5rem .65rem 1rem;color:var(--faint);font-size:13px}
 
+/* ---- fire after boot, folded under the library ---- */
+.boot{border-top:1px solid var(--line);margin-top:.35rem}
+.boot summary{
+  display:flex;align-items:center;gap:.5rem;cursor:pointer;
+  padding:.7rem .8rem;font-size:13.5px;font-weight:500;color:var(--muted);
+  list-style:none;
+}
+.boot summary::-webkit-details-marker{display:none}
+/* Chevron, rotated by the open state so the fold reads without a library. */
+.boot summary::before{
+  content:"";width:5px;height:5px;flex:none;margin-left:.1rem;
+  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:rotate(-45deg);transition:transform .15s;
+}
+.boot[open] summary::before{transform:rotate(45deg)}
+.boot summary:hover{background:#F5F5F0;color:var(--ink)}
+.bootlab{flex:1}
+.bootstate{
+  font:11.5px var(--mono);padding:.1rem .45rem;border-radius:999px;
+  background:var(--bg);border:1px solid var(--line);color:var(--faint);
+  max-width:11ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.bootstate.on{background:#FCF6EA;border-color:#EBDBB6;color:#7A5312}
+.bootbd{padding:0 .8rem .9rem}
+.bootbd p{font-size:12.5px;color:var(--muted);margin:0 0 .6rem}
+.boothint{margin:.55rem 0 0 !important;color:var(--faint) !important;font-size:12px !important}
+.boothint code{font:11px var(--mono);background:var(--bg);border:1px solid var(--line);
+  border-radius:5px;padding:.05rem .28rem}
+.bootbar{display:flex;align-items:center;gap:.6rem;margin-top:.75rem}
+.bootbar .btn{padding:.45rem .9rem;font-size:13.5px}
+
 /* ---- editor ---- */
 .namefield{
   flex:1;min-width:0;
@@ -186,7 +217,7 @@ pre{
 .caplab{font-size:13.5px;color:var(--muted)}
 .choice[aria-checked="true"] .caplab{color:var(--ink);font-weight:500}
 
-/* ---- toggles, orientation, swatches ---- */
+/* ---- toggles, orientation, light legend ---- */
 .row{
   display:flex;align-items:center;justify-content:space-between;gap:1rem;
   padding:.85rem 0;border-top:1px solid var(--line);
@@ -241,33 +272,24 @@ pre{
 .sdrow .act:hover{background:#F0F0EB;color:var(--ink)}
 .sdrow .act.del:hover{background:#FDF3F2;color:var(--danger)}
 .sdnote{padding:.9rem .8rem;color:var(--faint);font-size:13px}
-.swatches{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.9rem;align-items:center}
-.swatches .sw{
-  width:30px;height:30px;flex:none;padding:0;border-radius:50%;
-  border:1px solid rgba(26,29,27,.16);
+.legend{display:flex;flex-wrap:wrap;gap:.5rem 1.1rem;margin-top:.9rem}
+.legend div{display:flex;align-items:center;gap:.45rem;font-size:12.5px;color:var(--muted)}
+.legend i{width:9px;height:9px;border-radius:50%;flex:none}
+@keyframes breathe{0%,100%{opacity:.15}50%{opacity:1}}
+.legend i.pulse{animation:breathe 2.2s ease-in-out infinite}
+.legend i.pulse.fast{animation-duration:.7s}
+
+select.sel{
+  width:100%;background:var(--bg);color:var(--ink);
+  border:1px solid var(--line);border-radius:10px;
+  padding:.65rem .8rem;font:14.5px var(--sans);cursor:pointer;
 }
-/* Ring drawn outside the circle, so it reads on any swatch colour
-   including white. */
-.swatches .sw[aria-checked="true"],.pickwrap.on{
-  box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--accent);
-}
-.pickwrap{
-  width:34px;height:34px;flex:none;border-radius:50%;padding:2px;
-  display:grid;place-items:center;cursor:pointer;
-  background:conic-gradient(#E5484D,#F5B942,#5DD08A,#5AC8FA,#8C6BB1,#E5484D);
-}
-.swatches .picker{
-  width:30px;height:30px;padding:0;border:none;border-radius:50%;
-  background:none;cursor:pointer;-webkit-appearance:none;appearance:none;
-}
-.picker::-webkit-color-swatch-wrapper{padding:0}
-.picker::-webkit-color-swatch{border:none;border-radius:50%}
-.picker::-moz-color-swatch{border:none;border-radius:50%}
+select.sel:focus{outline:none;border-color:var(--accent);background:#fff}
 
 .field{margin-top:1rem}
 .field label{display:block;font-size:13.5px;font-weight:500;margin-bottom:.35rem}
-/* Text fields only. A bare ".field input" also caught the colour picker
-   and the "show password" checkbox and stretched them to full width. */
+/* Text fields only. A bare ".field input" also caught the "show password"
+   checkbox and stretched it to full width. */
 .field input[type="text"],.field input[type="password"]{
   width:100%;background:var(--bg);color:var(--ink);
   border:1px solid var(--line);border-radius:10px;
@@ -277,6 +299,8 @@ pre{
   outline:none;border-color:var(--accent);background:#fff;
 }
 .field .hint{font-size:12.5px;color:var(--faint);margin-top:.35rem}
+.field .hint code{font:11.5px var(--mono);background:var(--bg);border:1px solid var(--line);
+  border-radius:5px;padding:.05rem .3rem;color:var(--muted)}
 .reveal{display:flex;align-items:center;gap:.4rem;margin-top:.5rem;font-size:13px;color:var(--muted)}
 .notice{
   margin-top:1rem;padding:.75rem .9rem;border-radius:10px;
@@ -330,6 +354,27 @@ footer #ver{font:11.5px var(--mono)}
     <section class="card">
       <div class="card-hd"><h2>Library</h2><button class="link" id="new">New</button></div>
       <ul class="files" id="list"></ul>
+
+      <details class="boot" id="bootbox">
+        <summary>
+          <span class="bootlab">Fire after boot</span>
+          <span class="bootstate" id="bootstate">Off</span>
+        </summary>
+        <div class="bootbd">
+          <p>Runs one payload the next time the dongle is powered up, then
+          disarms itself.</p>
+          <select class="sel" id="launchsel">
+            <option value="">Disarmed</option>
+          </select>
+          <p class="boothint">Begin the script with <code>WAIT_FOR_HOST</code>,
+          or set a start delay. At power-up the host has usually not finished
+          setting the keyboard up, and anything typed before that is lost.</p>
+          <div class="bootbar">
+            <button class="btn" id="savelaunch">Apply</button>
+            <span class="status" id="launchstatus"></span>
+          </div>
+        </div>
+      </details>
     </section>
 
     <section class="card">
@@ -401,22 +446,16 @@ footer #ver{font:11.5px var(--mono)}
       </div>
 
       <div class="row">
-        <span class="lab">Status LED<small>Still turns amber while a payload runs, and red on an error.</small></span>
+        <span class="lab">Status LED<small>Reports what the dongle is doing. The colours are fixed so a glance is enough.</small></span>
         <button class="switch" id="ledsw" role="switch" aria-checked="true" aria-label="Status LED"></button>
       </div>
 
-      <div id="ledcolorrow">
-        <div class="field" style="margin-top:.4rem">
-          <label>Resting colour</label>
-          <div class="swatches" id="swatches">
-            <button class="sw" data-c="#005A8C" style="background:#005A8C" aria-checked="false" aria-label="Blue"></button>
-            <button class="sw" data-c="#5E8C61" style="background:#5E8C61" aria-checked="false" aria-label="Green"></button>
-            <button class="sw" data-c="#8C6BB1" style="background:#8C6BB1" aria-checked="false" aria-label="Purple"></button>
-            <button class="sw" data-c="#C77D2E" style="background:#C77D2E" aria-checked="false" aria-label="Amber"></button>
-            <button class="sw" data-c="#B3453C" style="background:#B3453C" aria-checked="false" aria-label="Red"></button>
-            <button class="sw" data-c="#FFFFFF" style="background:#FFFFFF" aria-checked="false" aria-label="White"></button>
-            <span class="pickwrap" id="pickwrap" title="Custom colour"><input type="color" class="picker" id="picker" aria-label="Custom colour"></span>
-          </div>
+      <div id="ledlegend">
+        <div class="legend">
+          <div><i class="pulse" style="background:#E5484D"></i>Waiting for a device</div>
+          <div><i style="background:#0028C8"></i>Standby</div>
+          <div><i class="pulse fast" style="background:#E5484D"></i>Payload running</div>
+          <div><i style="background:#00C83C"></i>Finished, 5 s</div>
         </div>
       </div>
 
@@ -658,10 +697,14 @@ $('#del').onclick = async () => {
 runBtn.onclick = async () => {
   try {
     await api('/api/run', form({script:script.value, delay:$('#delay').value || 0}));
+    // The device is already executing when this returns, and a short payload
+    // can finish before the next poll is served. Arm Stop here rather than
+    // waiting for a 'running' state the poll may never observe.
+    setBusy(true);
     refresh();
   } catch (e) { status.textContent = e.message; }
 };
-stopBtn.onclick = () => api('/api/stop', form({}));
+stopBtn.onclick = () => { stopBtn.disabled = true; api('/api/stop', form({})); };
 $('#clearlog').onclick = async () => {
   const r = await api('/api/log/clear', form({}));
   logSeq = (await r.json()).seq;
@@ -687,7 +730,7 @@ async function pollLog() {
 }
 
 /* ---- settings ---- */
-let rotation = 1, screenOn = true, ledOn = true, ledColor = '#005A8C';
+let rotation = 1, screenOn = true, ledOn = true;
 let showAccess = true;
 
 function paintDisplay() {
@@ -696,16 +739,40 @@ function paintDisplay() {
   $('#screensw').setAttribute('aria-checked', screenOn);
   $('#accesssw').setAttribute('aria-checked', showAccess);
   $('#ledsw').setAttribute('aria-checked', ledOn);
-  $('#ledcolorrow').hidden = !ledOn;
-  const up = ledColor.toUpperCase();
-  let preset = false;
-  document.querySelectorAll('.sw').forEach(b => {
-    const hit = b.dataset.c.toUpperCase() === up;
-    if (hit) preset = true;
-    b.setAttribute('aria-checked', hit);
-  });
-  $('#pickwrap').classList.toggle('on', !preset);
-  $('#picker').value = ledColor;
+  $('#ledlegend').hidden = !ledOn;
+}
+
+// Driven by the same 1 Hz poll as the rest of the page. The option list is
+// only rebuilt when the library actually changes, and a selection the
+// operator has touched is never overwritten from under them.
+let launchDirty = false, launchNames = '';
+
+function paintLaunch(names, armed) {
+  const sel = $('#launchsel');
+  const sig = names.join('\u0000');
+
+  if (sig !== launchNames) {
+    launchNames = sig;
+    const keep = sel.value;
+    sel.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = 'Disarmed';
+    sel.appendChild(none);
+    for (const n of names) {
+      const o = document.createElement('option');
+      o.value = n;
+      o.textContent = n;
+      sel.appendChild(o);
+    }
+    sel.value = names.includes(keep) ? keep : '';
+  }
+
+  if (!launchDirty) sel.value = names.includes(armed) ? armed : '';
+
+  const tag = $('#bootstate');
+  tag.textContent = armed || 'Off';
+  tag.classList.toggle('on', !!armed);
 }
 
 document.querySelectorAll('.orient button').forEach(b => b.onclick = () => {
@@ -809,21 +876,32 @@ $('#drivesw').onclick = async () => {
   }
 };
 $('#ledsw').onclick = () => { ledOn = !ledOn; paintDisplay(); };
-document.querySelectorAll('.sw').forEach(b => b.onclick = () => {
-  ledColor = b.dataset.c; paintDisplay();
-});
-$('#picker').oninput = e => { ledColor = e.target.value; paintDisplay(); };
 
 $('#savedisplay').onclick = async () => {
   const st = $('#dispstatus');
   st.className = 'status';
   try {
     await api('/api/settings/display', form({
-      rotation, screen: screenOn ? 1 : 0, led: ledOn ? 1 : 0, ledColor,
+      rotation, screen: screenOn ? 1 : 0, led: ledOn ? 1 : 0,
       showAccess: showAccess ? 1 : 0
     }));
     st.className = 'status ok';
     st.textContent = 'Applied';
+  } catch (e) { st.className = 'status err'; st.textContent = e.message; }
+};
+
+$('#launchsel').onchange = () => { launchDirty = true; };
+
+$('#savelaunch').onclick = async () => {
+  const st = $('#launchstatus');
+  const name = $('#launchsel').value;
+  st.className = 'status';
+  try {
+    await api('/api/settings/launch', form({name}));
+    launchDirty = false;
+    st.className = 'status ok';
+    st.textContent = name ? 'Armed' : 'Disarmed';
+    refresh();
   } catch (e) { st.className = 'status err'; st.textContent = e.message; }
 };
 
@@ -839,7 +917,6 @@ async function loadSettings() {
     screenOn = !!s.screen;
     showAccess = !!s.showAccess;
     ledOn = !!s.led;
-    ledColor = s.ledColor;
     if (document.activeElement !== $('#delay')) $('#delay').value = s.startDelay;
     if (document.activeElement !== $('#devname')) $('#devname').value = s.deviceName;
     usbDrive = !!s.usbDrive;
@@ -880,15 +957,19 @@ $('#reset').onclick = async () => {
 };
 
 /* ---- polling ---- */
-function paintState(s) {
-  const armed = s.state === 'armed';
-  const busy = armed || s.state === 'running';
+function setBusy(busy) {
   runBtn.disabled = busy;
   stopBtn.disabled = !busy;
   $('#delay').disabled = busy;
+  $('#dot').className = 'dot ' + (busy ? 'busy' : 'on');
+}
+
+function paintState(s) {
+  const armed = s.state === 'armed';
+  const busy = armed || s.state === 'running';
+  setBusy(busy);
   $('#host').className = 'host' + (s.hostSeen ? ' ready' : '');
   $('#hostlab').textContent = s.hostSeen ? 'Host ready' : 'No host yet';
-  $('#dot').className = 'dot ' + (busy ? 'busy' : 'on');
 
   status.className = 'status' + (s.state === 'error' ? ' err' : s.state === 'done' ? ' ok' : '');
   if (armed) status.textContent = 'Starting in ' + s.countdown + ' s';
@@ -914,6 +995,9 @@ async function refresh() {
   }
   try { paintState(s); } catch (e) { console.error('paintState', e); }
   try { paintList(s.payloads); } catch (e) { console.error('paintList', e); }
+  try {
+    paintLaunch((s.payloads || []).map(p => p.name), s.launchOnPlug || '');
+  } catch (e) { console.error('paintLaunch', e); }
   pollLog();
 }
 

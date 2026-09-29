@@ -30,6 +30,7 @@ void displaySetScreenOn(bool on);
 
 void displayWake();
 
-void displaySetLed(bool on, uint8_t r, uint8_t g, uint8_t b);
+void displaySetLed(bool on);
 
-void ledSet(uint8_t r, uint8_t g, uint8_t b);
+// No device on the access point yet: the LED breathes red until one joins.
+void displaySetWaiting(bool waiting);

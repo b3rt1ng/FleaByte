@@ -80,6 +80,7 @@ static void handleState() {
   json += "\"total\":" + String(st.total) + ",";
   json += "\"countdown\":" + String(st.countdown) + ",";
   json += "\"hostSeen\":" + String(duckyHostSeen() ? 1 : 0) + ",";
+  json += "\"launchOnPlug\":\"" + jsonEscape(storageLaunchOnPlug()) + "\",";
   json += "\"message\":\"" + jsonEscape(st.message) + "\",";
 
   json += "\"payloads\":[";
@@ -178,6 +179,35 @@ static void handleStop() {
   sendJson(200, "{\"ok\":true}");
 }
 
+// Arms a single run at the next power-up. An empty name disarms, and the
+// firmware clears the setting as it fires, so this never survives its own
+// trigger.
+static void handleLaunchOnPlug() {
+  String name = server.arg("name");
+  name.trim();
+
+  if (!name.isEmpty()) {
+    if (!storageNameIsValid(name)) {
+      sendError(400, "Invalid payload name");
+      return;
+    }
+    if (!storageExists(name)) {
+      sendError(404, "Payload not found");
+      return;
+    }
+  }
+
+  Settings st = storageLoadSettings();
+  st.layout = duckyGetLayout();
+  st.launchOnPlug = name;
+
+  if (!storageSaveSettings(st)) {
+    sendError(500, "Could not write to flash");
+    return;
+  }
+  sendJson(200, "{\"ok\":true}");
+}
+
 static void handleLayout() {
   String layout = server.arg("layout");
   if (!duckySetLayout(layout)) {
@@ -216,9 +246,7 @@ static void handleSettingsGet() {
   json += "\"rotation\":" + String(displayGetRotation()) + ",";
   json += "\"screen\":" + String(s.screenOn ? 1 : 0) + ",";
   json += "\"led\":" + String(s.ledOn ? 1 : 0) + ",";
-  char color[8];
-  snprintf(color, sizeof(color), "#%02X%02X%02X", s.ledR, s.ledG, s.ledB);
-  json += "\"ledColor\":\"" + String(color) + "\",";
+  json += "\"launchOnPlug\":\"" + jsonEscape(s.launchOnPlug) + "\",";
   json += "\"startDelay\":" + String(s.startDelay) + ",";
   json += "\"startDelayMax\":" + String(START_DELAY_MAX) + ",";
   json += "\"deviceName\":\"" + jsonEscape(s.deviceName.isEmpty()
@@ -288,25 +316,6 @@ static void handleDisplaySave() {
   if (server.hasArg("led")) st.ledOn = (server.arg("led").toInt() != 0);
   if (server.hasArg("showAccess")) st.showAccess = (server.arg("showAccess").toInt() != 0);
 
-  if (server.hasArg("ledColor")) {
-    String c = server.arg("ledColor");
-    c.trim();
-    if (c.startsWith("#")) c = c.substring(1);
-    if (c.length() != 6) {
-      sendError(400, "Colour must be six hex digits");
-      return;
-    }
-    char *end = nullptr;
-    long v = strtol(c.c_str(), &end, 16);
-    if (end == nullptr || *end != '\0') {
-      sendError(400, "Colour must be six hex digits");
-      return;
-    }
-    st.ledR = (v >> 16) & 0xFF;
-    st.ledG = (v >> 8) & 0xFF;
-    st.ledB = v & 0xFF;
-  }
-
   if (!storageSaveSettings(st)) {
     sendError(500, "Could not write to flash");
     return;
@@ -314,7 +323,7 @@ static void handleDisplaySave() {
 
   displaySetRotation(st.rotation);
   displaySetScreenOn(st.screenOn);
-  displaySetLed(st.ledOn, st.ledR, st.ledG, st.ledB);
+  displaySetLed(st.ledOn);
 
   sendJson(200, "{\"ok\":true}");
 }
@@ -449,6 +458,7 @@ void webBegin(const String &ssid) {
   server.on("/api/payload/delete", HTTP_POST, handlePayloadDelete);
   server.on("/api/run", HTTP_POST, handleRun);
   server.on("/api/stop", HTTP_POST, handleStop);
+  server.on("/api/settings/launch", HTTP_POST, handleLaunchOnPlug);
   server.on("/api/layout", HTTP_POST, handleLayout);
   server.on("/api/log", HTTP_GET, handleLog);
   server.on("/api/log/clear", HTTP_POST, handleLogClear);

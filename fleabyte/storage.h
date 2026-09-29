@@ -29,17 +29,22 @@ struct Settings {
   uint8_t rotation;
   bool screenOn;
   bool ledOn;
-  uint8_t ledR, ledG, ledB;
 
   uint16_t startDelay;
   uint16_t seedVersion;
   bool usbDrive;
   String deviceName;
   bool showAccess;
+
+  // Payload to run once at the next power-up, cleared as it fires.
+  String launchOnPlug;
 };
 
 Settings storageLoadSettings();
 bool storageSaveSettings(const Settings &s);
+
+// Cached: /api/state reports it every second and must not reparse the file.
+String storageLaunchOnPlug();
 
 void storageResetSettings();
 
