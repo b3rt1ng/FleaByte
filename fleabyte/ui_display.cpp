@@ -338,6 +338,16 @@ static void qrDisplay(esp_qrcode_handle_t qr) {
   s_qrDrawn = true;
 }
 
+// Credentials beside the QR are what someone reads to type them in, so they
+// wrap rather than truncate: a cut SSID is worse than useless.
+static void putWrapped(int16_t x, int16_t y, const String &s, uint16_t colour,
+                       size_t per) {
+  putText(x, y, s.substring(0, per), colour, 1);
+  if (s.length() > per) {
+    putText(x, y + 10, truncate(s.substring(per), per), colour, 1);
+  }
+}
+
 static bool drawQrJoin(int16_t x, int16_t y, const String &payload) {
   s_qrX = x;
   s_qrY = y;
@@ -373,16 +383,17 @@ void displayShowJoin(const String &ssid, const String &password) {
   }
 
   if (isLandscape()) {
-    putText(84, 8, "SCAN", C_CYAN, 1);
-    putText(84, 26, "SSID", C_DIM, 1);
-    putText(84, 36, truncate(ssid, 12), C_TEXT, 1);
-    putText(84, 52, "KEY", C_DIM, 1);
-    putText(84, 62, truncate(password, 12), C_LIME, 1);
+    // The QR ends at x=76, so the column starts at 79 and holds 13 per line.
+    putText(79, 8, "SCAN", C_CYAN, 1);
+    putText(79, 20, "SSID", C_DIM, 1);
+    putWrapped(79, 30, ssid, C_TEXT, 13);
+    putText(79, 52, "KEY", C_DIM, 1);
+    putWrapped(79, 62, password, C_LIME, 13);
   } else {
     putText(6, 86, "SSID", C_DIM, 1);
-    putText(6, 96, truncate(ssid, 12), C_TEXT, 1);
-    putText(6, 112, "KEY", C_DIM, 1);
-    putText(6, 122, truncate(password, 12), C_LIME, 1);
+    putWrapped(6, 96, ssid, C_TEXT, 12);
+    putText(6, 118, "KEY", C_DIM, 1);
+    putWrapped(6, 128, password, C_LIME, 12);
   }
 
   ledShow(s_ledR, s_ledG, s_ledB);

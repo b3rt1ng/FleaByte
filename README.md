@@ -24,7 +24,7 @@ needs installing.
 | | |
 |---|---|
 | ![Access](screens/screen-access.png) | ![Running](screens/screen-running.png) |
-| Waiting for the first connection | Running a payload |
+| Scan to join, or read the credentials | Running a payload |
 
 ## Scope of use
 

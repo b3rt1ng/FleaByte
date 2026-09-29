@@ -9,6 +9,8 @@ true ones: the firmware swaps red and blue because the panel is wired BGR.
 import re
 import sys
 from pathlib import Path
+
+import segno
 from PIL import Image
 
 W, H = 160, 80
@@ -158,15 +160,53 @@ def status(name, arrangement, ssid, ip, clients, state, colour,
     return s
 
 
+def wifi_payload(ssid, password):
+    """The join string both phone platforms understand, escaped as the
+    format requires. Matches wifiJoinPayload() in ui_display.cpp."""
+    def esc(v):
+        out = ""
+        for c in v:
+            if c in '\\;,:"':
+                out += "\\"
+            out += c
+        return out
+
+    return f"WIFI:T:WPA;S:{esc(ssid)};P:{esc(password)};;"
+
+
 def access(ssid, password):
     s = Screen()
-    s.corners(MAGENTA)
-    s.text(14, 4, "//ACCESS", CYAN)
-    s.hline(8, 15, W - 16, DIM)
-    s.text(8, 22, "SSID", DIM)
-    s.text(8, 32, ssid, TEXT)
-    s.text(8, 48, "KEY", DIM)
-    s.text(8, 58, password, LIME)
+
+    # Dark modules on a light card, quiet zone in modules so it scales with
+    # them: four while a version 3 symbol fits, two beyond. No corner
+    # brackets here, the firmware draws none on this screen.
+    matrix = [list(row) for row in segno.make(wifi_payload(ssid, password),
+                                              error="l").matrix]
+    size = len(matrix)
+    scale = 2
+    quiet = 4 if size <= 29 else 2
+    side = (size + quiet * 2) * scale
+    origin = quiet * scale
+
+    s.rect(3, 3, side, side, (0xFF, 0xFF, 0xFF))
+    for row in range(size):
+        for col in range(size):
+            if matrix[row][col]:
+                s.rect(3 + origin + col * scale, 3 + origin + row * scale,
+                       scale, scale, (0x00, 0x00, 0x00))
+
+    # 13 characters per line at x=79, wrapped onto a second line, as
+    # putWrapped() does in the firmware.
+    def wrapped(y, value, colour, per=13):
+        s.text(79, y, value[:per], colour)
+        if len(value) > per:
+            s.text(79, y + 10, value[per:per * 2], colour)
+
+    s.text(79, 8, "SCAN", CYAN)
+    s.text(79, 20, "SSID", DIM)
+    wrapped(30, ssid, TEXT)
+    s.text(79, 52, "KEY", DIM)
+    wrapped(62, password, LIME)
     return s
 
 
