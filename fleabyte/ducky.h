@@ -16,6 +16,12 @@ struct DuckyStatus {
   int total;
   int countdown;
   String message;
+
+  // Counts finished runs. Callers that sample the status periodically cannot
+  // spot a run that started and ended between two samples by comparing
+  // states, which is how a quick second run went unreported.
+  uint32_t finishSeq;
+  bool finishFailed;
 };
 
 void duckyBegin();

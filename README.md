@@ -19,7 +19,7 @@ needs installing.
 * Cancellable countdown before a payload starts
 * Host detection, so a payload can wait for the machine instead of guessing
 * microSD exposed to the host as a removable drive, with a file browser
-* Optional one-shot payload armed to fire at the next plug-in
+* One-shot arming that fires the script you are editing at the next plug-in
 * Status screen with run progress, and a light that reports what it is doing
 
 | | |
@@ -33,8 +33,8 @@ Machines you own, or for which you hold written authorisation. This is a
 keystroke injection tool: it types into whatever it is plugged into.
 
 Execution is triggered from the web interface, or by arming a single run for
-the next plug-in from the fold under the payload library. That arming is one
-shot and clears itself as it fires. Nothing else runs on plug-in, and the
+the next plug-in from the bar under the editor. That arming is one shot and
+clears itself as it fires. Nothing else runs on plug-in, and the
 button on the dongle never starts a payload.
 
 ## Hardware

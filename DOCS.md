@@ -149,17 +149,19 @@ that is linear in value reads as a cliff at one end.
 
 ## Fire after boot
 
-Arms one payload to run at the next power-up, from the fold under the
-payload library. It is a single shot: the firmware clears the setting and
-writes it back *before* queueing the payload, so a crash or a replug during
-the run cannot turn one arming into a payload that fires on every plug.
-Every other setting is kept.
+Arms one run at the next power-up, from the bar under the editor. It arms
+the script **as it stands in the editor**, not a reference to a library
+entry: edit it and arm what you see. The device keeps its own snapshot in
+`/armed.txt`, outside the payload directory, so renaming or deleting a
+library payload leaves the arming alone.
 
-The badge on the fold shows what is armed, so it is visible without
-expanding it.
+The existence of that file is the armed state. There is no second copy of
+that fact to drift out of sync, and the badge reports its size.
 
-Nothing else runs on plug-in, and the button on the dongle never starts a
-payload.
+It is a single shot: the snapshot is deleted *before* the payload is queued,
+and nothing is queued unless the delete took, so a crash or a replug during
+the run cannot turn one arming into a payload that fires on every plug. A
+factory reset clears it too.
 
 At power-up the host has usually not finished setting the keyboard up, and
 anything typed before that is lost. Start the script with `WAIT_FOR_HOST`,

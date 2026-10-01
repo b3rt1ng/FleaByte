@@ -423,23 +423,54 @@ Settings storageLoadSettings() {
     } else if (key == "startdelay") {
       long d = value.toInt();
       if (d >= 0 && d <= START_DELAY_MAX) s.startDelay = (uint16_t)d;
-    } else if (key == "launchonplug") {
-      value.trim();
-      if (storageNameIsValid(value)) s.launchOnPlug = value;
     }
   }
   return s;
 }
 
-static String s_launchCache;
-static bool s_launchCached = false;
+static size_t s_armedSize = 0;
+static bool s_armedCached = false;
 
-String storageLaunchOnPlug() {
-  if (!s_launchCached) {
-    s_launchCache = storageLoadSettings().launchOnPlug;
-    s_launchCached = true;
+size_t storageArmedSize() {
+  if (!s_armedCached) {
+    File f = LittleFS.open(ARMED_FILE, "r");
+    s_armedSize = f ? f.size() : 0;
+    if (f) f.close();
+    s_armedCached = true;
   }
-  return s_launchCache;
+  return s_armedSize;
+}
+
+bool storageArmedClear() {
+  s_armedSize = 0;
+  s_armedCached = true;
+  return LittleFS.exists(ARMED_FILE) ? LittleFS.remove(ARMED_FILE) : true;
+}
+
+bool storageArmedWrite(const String &script) {
+  if (script.isEmpty()) return storageArmedClear();
+  if (script.length() > MAX_SCRIPT_BYTES) return false;
+
+  File f = LittleFS.open(ARMED_FILE, "w");
+  if (!f) return false;
+  size_t written = f.print(script);
+  f.close();
+
+  if (written != script.length()) {
+    storageArmedClear();
+    return false;
+  }
+  s_armedSize = written;
+  s_armedCached = true;
+  return true;
+}
+
+String storageArmedRead() {
+  File f = LittleFS.open(ARMED_FILE, "r");
+  if (!f) return String();
+  String content = f.readString();
+  f.close();
+  return content;
 }
 
 bool storageSaveSettings(const Settings &s) {
@@ -476,19 +507,12 @@ bool storageSaveSettings(const Settings &s) {
     f.print("devicename=");
     f.println(s.deviceName);
   }
-  if (!s.launchOnPlug.isEmpty()) {
-    f.print("launchonplug=");
-    f.println(s.launchOnPlug);
-  }
   f.close();
 
-  s_launchCache = s.launchOnPlug;
-  s_launchCached = true;
   return true;
 }
 
 void storageResetSettings() {
   LittleFS.remove(SETTINGS_FILE);
-  s_launchCache = "";
-  s_launchCached = true;
+  storageArmedClear();
 }

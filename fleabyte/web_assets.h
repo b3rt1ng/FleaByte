@@ -52,6 +52,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   font-size:12.5px;font-weight:600;letter-spacing:.01em;
 }
 .chip:hover{background:#E3EDE3}
+/* Only ever rendered while armed, so it reads as a warning rather than as
+   one more permanent badge to tune out. */
+.chip.armed{background:#FCF6EA;color:#7A5312;box-shadow:inset 0 0 0 1px #EBDBB6}
+.chip.armed:hover{background:#F7EDD9}
 .iconbtn{
   width:36px;height:36px;border-radius:50%;
   display:grid;place-items:center;color:var(--muted);
@@ -91,36 +95,19 @@ main{max-width:880px;margin:0 auto;padding:1.75rem 1.25rem 0}
 .files button[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
 .blank{padding:.5rem .65rem 1rem;color:var(--faint);font-size:13px}
 
-/* ---- fire after boot, folded under the library ---- */
-.boot{border-top:1px solid var(--line);margin-top:.35rem}
-.boot summary{
-  display:flex;align-items:center;gap:.5rem;cursor:pointer;
-  padding:.7rem .8rem;font-size:13.5px;font-weight:500;color:var(--muted);
-  list-style:none;
-}
-.boot summary::-webkit-details-marker{display:none}
-/* Chevron, rotated by the open state so the fold reads without a library. */
-.boot summary::before{
-  content:"";width:5px;height:5px;flex:none;margin-left:.1rem;
-  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
-  transform:rotate(-45deg);transition:transform .15s;
-}
-.boot[open] summary::before{transform:rotate(45deg)}
-.boot summary:hover{background:#F5F5F0;color:var(--ink)}
-.bootlab{flex:1}
+/* ---- fire after boot, under the run bar ---- */
+.bootbar{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+  margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--line)}
+.bootbar .btn{padding:.45rem .9rem;font-size:13.5px}
+.btn.ghost.boot[aria-pressed="true"]{color:#7A5312;border-color:#EBDBB6;background:#FCF6EA}
 .bootstate{
   font:11.5px var(--mono);padding:.1rem .45rem;border-radius:999px;
   background:var(--bg);border:1px solid var(--line);color:var(--faint);
-  max-width:11ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .bootstate.on{background:#FCF6EA;border-color:#EBDBB6;color:#7A5312}
-.bootbd{padding:0 .8rem .9rem}
-.bootbd p{font-size:12.5px;color:var(--muted);margin:0 0 .6rem}
-.boothint{margin:.55rem 0 0 !important;color:var(--faint) !important;font-size:12px !important}
+.boothint{flex:1;min-width:16ch;color:var(--faint);font-size:12px}
 .boothint code{font:11px var(--mono);background:var(--bg);border:1px solid var(--line);
   border-radius:5px;padding:.05rem .28rem}
-.bootbar{display:flex;align-items:center;gap:.6rem;margin-top:.75rem}
-.bootbar .btn{padding:.45rem .9rem;font-size:13.5px}
 
 /* ---- editor ---- */
 .namefield{
@@ -336,6 +323,8 @@ footer #ver{font:11.5px var(--mono)}
 <div class="topbar">
   <div class="brand"><span class="dot" id="dot"></span>Fleabyte</div>
   <div class="tools">
+    <button class="chip armed" id="armedchip" hidden
+            title="A script is armed to fire at the next plug-in">ARMED</button>
     <button class="chip" id="layoutchip" title="Keyboard layout">AZERTY</button>
     <button class="iconbtn" id="gear" aria-label="Settings">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l1.7-1.3-1.8-3.1-2 .8a7.7 7.7 0 0 0-2.6-1.5L14.4 3h-3.6l-.3 2.4a7.7 7.7 0 0 0-2.6 1.5l-2-.8L4 9.2l1.7 1.3a7.7 7.7 0 0 0 0 3L4 14.8l1.8 3.1 2-.8a7.7 7.7 0 0 0 2.6 1.5l.3 2.4h3.6l.3-2.4a7.7 7.7 0 0 0 2.6-1.5l2 .8 1.8-3.1z"/></svg>
@@ -355,26 +344,6 @@ footer #ver{font:11.5px var(--mono)}
       <div class="card-hd"><h2>Library</h2><button class="link" id="new">New</button></div>
       <ul class="files" id="list"></ul>
 
-      <details class="boot" id="bootbox">
-        <summary>
-          <span class="bootlab">Fire after boot</span>
-          <span class="bootstate" id="bootstate">Off</span>
-        </summary>
-        <div class="bootbd">
-          <p>Runs one payload the next time the dongle is powered up, then
-          disarms itself.</p>
-          <select class="sel" id="launchsel">
-            <option value="">Disarmed</option>
-          </select>
-          <p class="boothint">Begin the script with <code>WAIT_FOR_HOST</code>,
-          or set a start delay. At power-up the host has usually not finished
-          setting the keyboard up, and anything typed before that is lost.</p>
-          <div class="bootbar">
-            <button class="btn" id="savelaunch">Apply</button>
-            <span class="status" id="launchstatus"></span>
-          </div>
-        </div>
-      </details>
     </section>
 
     <section class="card">
@@ -396,6 +365,12 @@ footer #ver{font:11.5px var(--mono)}
             s
           </label>
           <span class="status" id="status">Ready</span>
+        </div>
+        <div class="bootbar">
+          <button class="btn ghost boot" id="armboot">Fire after boot</button>
+          <span class="bootstate" id="bootstate">Off</span>
+          <span class="boothint">Arms the script above exactly as it stands.
+          Begin it with <code>WAIT_FOR_HOST</code>, or set a start delay.</span>
         </div>
       </div>
     </section>
@@ -452,10 +427,11 @@ footer #ver{font:11.5px var(--mono)}
 
       <div id="ledlegend">
         <div class="legend">
-          <div><i class="pulse" style="background:#E5484D"></i>Waiting for a device</div>
+          <div><i class="pulse" style="background:#E5484D"></i>Waiting for a device, slow</div>
           <div><i style="background:#0028C8"></i>Standby</div>
-          <div><i class="pulse fast" style="background:#E5484D"></i>Payload running</div>
+          <div><i class="pulse fast" style="background:#E5484D"></i>Payload running, fast</div>
           <div><i style="background:#00C83C"></i>Finished, 5 s</div>
+          <div><i style="background:#E5484D"></i>Error, steady 5 s</div>
         </div>
       </div>
 
@@ -742,38 +718,25 @@ function paintDisplay() {
   $('#ledlegend').hidden = !ledOn;
 }
 
-// Driven by the same 1 Hz poll as the rest of the page. The option list is
-// only rebuilt when the library actually changes, and a selection the
-// operator has touched is never overwritten from under them.
-let launchDirty = false, launchNames = '';
-
-function paintLaunch(names, armed) {
-  const sel = $('#launchsel');
-  const sig = names.join('\u0000');
-
-  if (sig !== launchNames) {
-    launchNames = sig;
-    const keep = sel.value;
-    sel.innerHTML = '';
-    const none = document.createElement('option');
-    none.value = '';
-    none.textContent = 'Disarmed';
-    sel.appendChild(none);
-    for (const n of names) {
-      const o = document.createElement('option');
-      o.value = n;
-      o.textContent = n;
-      sel.appendChild(o);
-    }
-    sel.value = names.includes(keep) ? keep : '';
-  }
-
-  if (!launchDirty) sel.value = names.includes(armed) ? armed : '';
-
+// The arming is a snapshot held by the device, not a reference to anything
+// in the library, so the whole state is one number: how many bytes are armed.
+function paintLaunch(armedBytes) {
   const tag = $('#bootstate');
-  tag.textContent = armed || 'Off';
-  tag.classList.toggle('on', !!armed);
+  const btn = $('#armboot');
+  const on = armedBytes > 0;
+  tag.textContent = on ? armedBytes + ' B armed' : 'Off';
+  tag.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on);
+  btn.textContent = on ? 'Disarm' : 'Fire after boot';
+  $('#armedchip').hidden = !on;
 }
+
+// Takes you to the control rather than disarming on the spot: a mis-click on
+// something always on screen should not silently undo an arming.
+$('#armedchip').onclick = () => {
+  show('main');
+  $('#armboot').scrollIntoView({block: 'center', behavior: 'smooth'});
+};
 
 document.querySelectorAll('.orient button').forEach(b => b.onclick = () => {
   rotation = +b.dataset.rot; paintDisplay();
@@ -890,17 +853,14 @@ $('#savedisplay').onclick = async () => {
   } catch (e) { st.className = 'status err'; st.textContent = e.message; }
 };
 
-$('#launchsel').onchange = () => { launchDirty = true; };
-
-$('#savelaunch').onclick = async () => {
-  const st = $('#launchstatus');
-  const name = $('#launchsel').value;
+$('#armboot').onclick = async () => {
+  const st = $('#status');
+  const arming = $('#armboot').getAttribute('aria-pressed') !== 'true';
   st.className = 'status';
   try {
-    await api('/api/settings/launch', form({name}));
-    launchDirty = false;
+    await api('/api/settings/launch', form({script: arming ? script.value : ''}));
     st.className = 'status ok';
-    st.textContent = name ? 'Armed' : 'Disarmed';
+    st.textContent = arming ? 'Armed for next boot' : 'Disarmed';
     refresh();
   } catch (e) { st.className = 'status err'; st.textContent = e.message; }
 };
@@ -995,9 +955,7 @@ async function refresh() {
   }
   try { paintState(s); } catch (e) { console.error('paintState', e); }
   try { paintList(s.payloads); } catch (e) { console.error('paintList', e); }
-  try {
-    paintLaunch((s.payloads || []).map(p => p.name), s.launchOnPlug || '');
-  } catch (e) { console.error('paintLaunch', e); }
+  try { paintLaunch(s.armed || 0); } catch (e) { console.error('paintLaunch', e); }
   pollLog();
 }
 

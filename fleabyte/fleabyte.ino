@@ -33,24 +33,22 @@ static String defaultSsid() {
   return String(AP_SSID_PREFIX) + "-" + suffix;
 }
 
-// One shot: the setting is cleared and written back before the payload is
-// queued, so a crash or a replug mid-run cannot turn a single arming into a
-// payload that fires on every plug.
-static void launchOnPlug(Settings &settings) {
-  if (settings.launchOnPlug.isEmpty()) return;
+// One shot: the snapshot is deleted before the payload is queued, so a crash
+// or a replug mid-run cannot turn one arming into a payload that fires on
+// every plug. Nothing is queued unless that delete actually took.
+static void launchOnPlug(uint16_t startDelay) {
+  if (storageArmedSize() == 0) return;
 
-  String name = settings.launchOnPlug;
-  settings.launchOnPlug = "";
-  settings.layout = duckyGetLayout();
-  storageSaveSettings(settings);
+  String script = storageArmedRead();
 
-  if (!storageExists(name)) {
-    duckyLog("== launch on plug: " + name + " is gone, disarmed ==");
+  if (!storageArmedClear()) {
+    duckyLog("== fire after boot: could not disarm, refusing to run ==");
     return;
   }
+  if (script.isEmpty()) return;
 
-  duckyLog("== launch on plug: " + name + " ==");
-  duckyRun(storageRead(name), name, settings.startDelay);
+  duckyLog("== fire after boot ==");
+  duckyRun(script, "boot", startDelay);
 }
 
 void setup() {
@@ -103,7 +101,7 @@ void setup() {
   g_joinLatched = settings.showAccess;
   if (g_joinLatched) displayShowJoin(g_ssid, g_password);
 
-  launchOnPlug(settings);
+  launchOnPlug(settings.startDelay);
 }
 
 static void handleButton() {
@@ -154,12 +152,17 @@ void loop() {
     UsbDriveStatus drv = usbDriveGetStatus();
     info.sdPresent = drv.cardPresent;
     info.sdExposed = drv.exposed;
+    info.armed = storageArmedSize() > 0;
     info.clients = WiFi.softAPgetStationNum();
     info.ducky = duckyGetStatus();
 
     displaySetWaiting(info.clients == 0);
 
-    if (info.clients > 0 || duckyIsRunning()) g_joinLatched = false;
+    // Only a joined device clears it, which is what the setting promises. A
+    // run used to clear it too, but a web-triggered run already implies a
+    // client, so the clause only ever fired for a payload armed at boot and
+    // wiped the join screen the operator had asked to keep.
+    if (info.clients > 0) g_joinLatched = false;
 
     if (!g_joinLatched && now >= g_joinUntil) displayUpdate(info);
   }

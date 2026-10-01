@@ -34,6 +34,8 @@ static bool s_screenOn = true;
 static bool s_ledOn = true;
 static bool s_ledWaiting = false;
 static bool s_ledFault = false;
+static bool s_ledMessage = false;
+static uint32_t s_finishSeq = 0;
 static uint32_t s_ledHoldUntil = 0;
 static uint32_t s_nextLedFrame = 0;
 
@@ -47,6 +49,8 @@ static uint32_t s_wakeUntil = 0;
 static bool s_backlightLit = true;
 static bool s_fullRepaint = true;
 static bool s_splash = false;
+
+static void ledEmit(uint8_t r, uint8_t g, uint8_t b);
 
 static bool isLandscape() { return s_rotation == 1 || s_rotation == 3; }
 static int16_t screenW() { return isLandscape() ? 160 : 80; }
@@ -427,6 +431,12 @@ void displayShowMessage(const String &title, const String &detail) {
   tft.drawFastHLine(8, 15, screenW() - 16, C_DIM);
   putText(8, 30, truncate(title, charsPerLine()), C_TEXT, 1);
   putText(8, 44, truncate(detail, charsPerLine()), C_DIM, 1);
+
+  // Every caller either reboots or blocks straight after this, so the frame
+  // clock may never run again: the amber goes out now rather than through
+  // the state machine.
+  s_ledMessage = true;
+  if (s_ledOn) ledEmit(255, 140, 0);
 }
 
 static String s_arrangement, s_name;
@@ -436,6 +446,7 @@ static DuckyState s_duckyState = DUCKY_IDLE;
 static int s_line = -1, s_total = -1;
 static bool s_running = false;
 static bool s_armed = false;
+static int8_t s_armedShown = -1;
 
 void displayUpdate(const DisplayInfo &info) {
   applyBacklight();
@@ -448,6 +459,7 @@ void displayUpdate(const DisplayInfo &info) {
     placeFields();
     drawChrome(info.arrangement, info.name);
     s_sdState = -1;
+    s_armedShown = -1;
 
     for (uint8_t i = 0; i < F_COUNT; i++) s_f[i].text = "";
     s_clients = -1;
@@ -458,6 +470,7 @@ void displayUpdate(const DisplayInfo &info) {
     s_name = info.name;
     drawChrome(info.arrangement, info.name);
     s_sdState = -1;
+    s_armedShown = -1;
     for (uint8_t i = 0; i < F_COUNT; i++) s_f[i].text = "";
     s_clients = -1;
   }
@@ -488,16 +501,32 @@ void displayUpdate(const DisplayInfo &info) {
   }
   setField(F_STATE, state, color);
 
-  // The outcome is held for a few seconds on the way past, because a run
-  // that ends in well under a second would otherwise never be seen.
-  if (info.ducky.state != s_duckyState) {
-    if (info.ducky.state == DUCKY_DONE || info.ducky.state == DUCKY_ERROR) {
-      s_ledFault = (info.ducky.state == DUCKY_ERROR);
-      s_ledHoldUntil = millis() + LED_OUTCOME_MS;
-    } else {
-      s_ledHoldUntil = 0;
+  // Second state line, under the run state and echoing its marker: the dot
+  // plus a word is already how this screen says what it is doing. Only drawn
+  // while armed, so its presence is the message.
+  if ((int8_t)info.armed != s_armedShown) {
+    s_armedShown = info.armed ? 1 : 0;
+    const int16_t ax = isLandscape() ? 92 : P_LEFT;
+    const int16_t ay = isLandscape() ? 62 : 146;
+    tft.fillRect(ax, ay, 40, 8, C_BG);
+    if (info.armed) {
+      tft.fillRect(ax, ay + 1, 5, 5, C_AMBER);
+      putText(ax + 9, ay, "BOOT", C_AMBER, 1);
     }
   }
+
+  // Driven by the run counter, not by a change of state: this is sampled
+  // every 400 ms, and a second quick run would start and finish inside one
+  // sample, leaving the state identical and the outcome unreported.
+  if (info.ducky.finishSeq != s_finishSeq) {
+    s_finishSeq = info.ducky.finishSeq;
+    s_ledFault = info.ducky.finishFailed;
+    s_ledHoldUntil = millis() + LED_OUTCOME_MS;
+  } else if (info.ducky.state == DUCKY_RUNNING || info.ducky.state == DUCKY_ARMED) {
+    s_ledHoldUntil = 0;
+  }
+
+  s_ledMessage = false;
 
   s_duckyState = info.ducky.state;
   s_line = info.ducky.line;
@@ -535,11 +564,12 @@ static void clearProgress() {
 }
 
 enum LedKey : uint8_t {
-  K_OFF, K_FAULT, K_DONE, K_ACTIVE, K_WAITING, K_STANDBY
+  K_OFF, K_MESSAGE, K_FAULT, K_DONE, K_ACTIVE, K_WAITING, K_STANDBY
 };
 
 static uint8_t ledKey() {
   if (!s_ledOn) return K_OFF;
+  if (s_ledMessage) return K_MESSAGE;
   if (s_ledHoldUntil) return s_ledFault ? K_FAULT : K_DONE;
   if (s_running || s_armed) return K_ACTIVE;
   if (s_ledWaiting) return K_WAITING;
@@ -552,6 +582,7 @@ static void ledTarget(uint32_t now, uint8_t key,
                       uint8_t &r, uint8_t &g, uint8_t &b) {
   r = g = b = 0;
   switch (key) {
+    case K_MESSAGE: r = 255; g = 140; break;
     case K_FAULT:   r = 255; break;
     case K_DONE:    r = LED_DONE_R; g = LED_DONE_G; b = LED_DONE_B; break;
     case K_ACTIVE:  r = breathe(now, LED_BREATH_RUN_MS); break;

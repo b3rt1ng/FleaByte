@@ -67,8 +67,15 @@ static void handleIndex() {
 
 static void handleState() {
   DuckyStatus st = duckyGetStatus();
+  const std::vector<PayloadInfo> &items = storageListDetailed();
 
-  String json = "{";
+  // Polled once a second by every open page, and String grows in 16 byte
+  // steps, so without this the response reallocates a few dozen times a
+  // second for nothing.
+  String json;
+  json.reserve(384 + items.size() * (MAX_NAME_LEN + 40));
+
+  json = "{";
   json += "\"ssid\":\"" + jsonEscape(g_ssid) + "\",";
   json += "\"version\":\"" FIRMWARE_VERSION "\",";
   json += "\"ip\":\"" + WiFi.softAPIP().toString() + "\",";
@@ -80,11 +87,10 @@ static void handleState() {
   json += "\"total\":" + String(st.total) + ",";
   json += "\"countdown\":" + String(st.countdown) + ",";
   json += "\"hostSeen\":" + String(duckyHostSeen() ? 1 : 0) + ",";
-  json += "\"launchOnPlug\":\"" + jsonEscape(storageLaunchOnPlug()) + "\",";
+  json += "\"armed\":" + String((uint32_t)storageArmedSize()) + ",";
   json += "\"message\":\"" + jsonEscape(st.message) + "\",";
 
   json += "\"payloads\":[";
-  const std::vector<PayloadInfo> &items = storageListDetailed();
   for (size_t i = 0; i < items.size(); i++) {
     if (i) json += ",";
     json += "{\"name\":\"" + jsonEscape(items[i].name) + "\",";
@@ -179,29 +185,21 @@ static void handleStop() {
   sendJson(200, "{\"ok\":true}");
 }
 
-// Arms a single run at the next power-up. An empty name disarms, and the
-// firmware clears the setting as it fires, so this never survives its own
-// trigger.
+// Arms the script as it stands, not a reference to a library entry: the
+// operator edits in place and arms what they see. An empty script disarms.
 static void handleLaunchOnPlug() {
-  String name = server.arg("name");
-  name.trim();
-
-  if (!name.isEmpty()) {
-    if (!storageNameIsValid(name)) {
-      sendError(400, "Invalid payload name");
-      return;
-    }
-    if (!storageExists(name)) {
-      sendError(404, "Payload not found");
-      return;
-    }
+  if (!server.hasArg("script")) {
+    sendError(400, "Missing script; send an empty one to disarm");
+    return;
   }
 
-  Settings st = storageLoadSettings();
-  st.layout = duckyGetLayout();
-  st.launchOnPlug = name;
+  String script = server.arg("script");
+  if (script.length() > MAX_SCRIPT_BYTES) {
+    sendError(400, "Script is larger than " + String(MAX_SCRIPT_BYTES) + " bytes");
+    return;
+  }
 
-  if (!storageSaveSettings(st)) {
+  if (!storageArmedWrite(script)) {
     sendError(500, "Could not write to flash");
     return;
   }
@@ -236,7 +234,10 @@ static void handleLogClear() {
 static void handleSettingsGet() {
   Settings s = storageLoadSettings();
 
-  String json = "{";
+  String json;
+  json.reserve(768 + duckyLayoutCount() * 64);
+
+  json = "{";
   json += "\"layout\":\"" + jsonEscape(duckyGetLayout()) + "\",";
   json += "\"ssid\":\"" + jsonEscape(g_ssid) + "\",";
   json += "\"password\":\"" + jsonEscape(s.password.isEmpty() ? storageDefaultPassword() : s.password) + "\",";
@@ -246,7 +247,6 @@ static void handleSettingsGet() {
   json += "\"rotation\":" + String(displayGetRotation()) + ",";
   json += "\"screen\":" + String(s.screenOn ? 1 : 0) + ",";
   json += "\"led\":" + String(s.ledOn ? 1 : 0) + ",";
-  json += "\"launchOnPlug\":\"" + jsonEscape(s.launchOnPlug) + "\",";
   json += "\"startDelay\":" + String(s.startDelay) + ",";
   json += "\"startDelayMax\":" + String(START_DELAY_MAX) + ",";
   json += "\"deviceName\":\"" + jsonEscape(s.deviceName.isEmpty()
@@ -376,7 +376,12 @@ static void handleSdList() {
     return;
   }
 
-  String json = "{\"path\":\"" + jsonEscape(path) + "\",\"entries\":[";
+  // Up to 256 entries, so the appends below would otherwise realloc and copy
+  // the whole listing about a thousand times.
+  String json;
+  json.reserve(64 + path.length() + entries.size() * 96);
+
+  json = "{\"path\":\"" + jsonEscape(path) + "\",\"entries\":[";
   for (size_t i = 0; i < entries.size(); i++) {
     if (i) json += ",";
     json += "{\"name\":\"" + jsonEscape(entries[i].name) + "\",";

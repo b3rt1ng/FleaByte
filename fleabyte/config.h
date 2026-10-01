@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.4.0"
+#define FIRMWARE_VERSION "0.4.1"
 
 #define AP_SSID_PREFIX     "Fleabyte"
 #define AP_PASSWORD_PREFIX "flea-"
@@ -41,8 +41,18 @@
 #define MAX_SCRIPT_BYTES      16384
 #define MAX_LOG_BYTES         4096
 
+// Low-water mark for the run log. Trimming back to the limit itself would
+// make every later line reallocate and copy the whole buffer, so it drops
+// to here and coasts for a few dozen lines before trimming again.
+#define LOG_KEEP_BYTES        3072
+
 #define PAYLOAD_DIR   "/payloads"
 #define SETTINGS_FILE "/settings.txt"
+
+// Snapshot of the script armed for the next boot. Kept out of PAYLOAD_DIR so
+// it never shows in the library, and its existence is the armed state: there
+// is no second copy of that fact to drift out of sync.
+#define ARMED_FILE    "/armed.txt"
 #define MAX_NAME_LEN  40
 
 #define SSID_MIN_LEN     1

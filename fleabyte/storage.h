@@ -35,16 +35,18 @@ struct Settings {
   bool usbDrive;
   String deviceName;
   bool showAccess;
-
-  // Payload to run once at the next power-up, cleared as it fires.
-  String launchOnPlug;
 };
 
 Settings storageLoadSettings();
 bool storageSaveSettings(const Settings &s);
 
-// Cached: /api/state reports it every second and must not reparse the file.
-String storageLaunchOnPlug();
+// The script armed for the next boot, snapshotted from the editor. Writing
+// an empty one disarms. The size is cached, since /api/state reports the
+// armed state every second and must not stat the file each time.
+bool storageArmedWrite(const String &script);
+bool storageArmedClear();
+String storageArmedRead();
+size_t storageArmedSize();
 
 void storageResetSettings();
 

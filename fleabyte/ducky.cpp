@@ -64,6 +64,8 @@ static uint16_t g_pendingDelay = 0;
 static String g_message = "Ready";
 static String g_log;
 static uint32_t g_logSeq = 0;
+static uint32_t g_finishSeq = 0;
+static bool g_finishFailed = false;
 static String g_layoutCode = "us";
 
 static uint32_t g_defaultDelay = DEFAULT_LINE_DELAY_MS;
@@ -155,14 +157,19 @@ static void logLine(const String &s) {
   g_logSeq += s.length() + 1;
   if (g_log.length() > MAX_LOG_BYTES) {
 
-    int cut = g_log.indexOf('\n', g_log.length() - MAX_LOG_BYTES);
-    g_log = (cut >= 0) ? g_log.substring(cut + 1) : g_log.substring(g_log.length() - MAX_LOG_BYTES);
+    unsigned int drop = g_log.length() - LOG_KEEP_BYTES;
+    int cut = g_log.indexOf('\n', drop);
+    g_log = (cut >= 0) ? g_log.substring(cut + 1) : g_log.substring(drop);
   }
   unlock();
 }
 
 static void setState(DuckyState st, const String &msg) {
   lock();
+  if (st == DUCKY_DONE || st == DUCKY_ERROR) {
+    g_finishSeq++;
+    g_finishFailed = (st == DUCKY_ERROR);
+  }
   g_state = st;
   g_message = msg;
   unlock();
@@ -383,15 +390,19 @@ static bool armingCountdown(uint16_t seconds) {
   return !g_abort;
 }
 
-static void runScript(const String &script) {
+// Takes the queued buffer rather than a String of it: at 16 kB a copy per
+// run is worth avoiding, and it would stay live for the whole execution.
+// The buffer is ours and freed by the caller, so lines are cut in place.
+static void runScript(char *script) {
   g_defaultDelay = DEFAULT_LINE_DELAY_MS;
   g_charDelay = DEFAULT_CHAR_DELAY_MS;
 
+  size_t length = strlen(script);
   int total = 0;
-  for (size_t i = 0; i < script.length(); i++) {
+  for (size_t i = 0; i < length; i++) {
     if (script[i] == '\n') total++;
   }
-  if (script.length() && script[script.length() - 1] != '\n') total++;
+  if (length && script[length - 1] != '\n') total++;
 
   if (g_pendingDelay) {
     logLine("== armed, " + String(g_pendingDelay) + "s ==");
@@ -408,15 +419,22 @@ static void runScript(const String &script) {
 
   String previousLine;
   int lineNo = 0;
-  int pos = 0;
+  size_t pos = 0;
   bool failed = false;
 
-  while (pos < (int)script.length()) {
+  while (pos < length) {
     if (g_abort) break;
 
-    int nl = script.indexOf('\n', pos);
-    String raw = (nl < 0) ? script.substring(pos) : script.substring(pos, nl);
-    pos = (nl < 0) ? script.length() : nl + 1;
+    char *line = script + pos;
+    char *nl = strchr(line, '\n');
+    if (nl) {
+      *nl = '\0';
+      pos = (size_t)(nl - script) + 1;
+    } else {
+      pos = length;
+    }
+
+    String raw(line);
     raw.replace("\r", "");
     lineNo++;
     setProgress(lineNo, total);
@@ -478,7 +496,7 @@ static void duckyTask(void *arg) {
   for (;;) {
     char *script = nullptr;
     if (xQueueReceive(g_queue, &script, portMAX_DELAY) == pdTRUE && script) {
-      runScript(String(script));
+      runScript(script);
       free(script);
     }
   }
@@ -499,7 +517,12 @@ void duckyBegin() {
   g_queue = xQueueCreate(1, sizeof(char *));
   Keyboard.begin(KeyboardLayout_en_US);
   Keyboard.onEvent(onKeyboardLeds);
-  xTaskCreatePinnedToCore(duckyTask, "ducky", 8192, nullptr, 2, nullptr, 1);
+  // Same priority as loopTask, which serves the HTTP requests on this core.
+  // Above it, a payload preempts the web server and the page stops answering
+  // for as long as the run lasts. Equal priority time-slices them per tick,
+  // which costs the odd millisecond of typing jitter and keeps the dongle
+  // controllable while it types.
+  xTaskCreatePinnedToCore(duckyTask, "ducky", 8192, nullptr, 1, nullptr, 1);
 }
 
 bool duckyRun(const String &script, const String &origin, uint16_t delaySeconds) {
@@ -534,6 +557,8 @@ DuckyStatus duckyGetStatus() {
   s.total = g_total;
   s.countdown = g_countdown;
   s.message = g_message;
+  s.finishSeq = g_finishSeq;
+  s.finishFailed = g_finishFailed;
   unlock();
   return s;
 }

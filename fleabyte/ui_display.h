@@ -10,6 +10,7 @@ struct DisplayInfo {
   int clients;
   bool sdPresent;
   bool sdExposed;
+  bool armed;   // a script is waiting to fire at the next boot
   DuckyStatus ducky;
 };
 

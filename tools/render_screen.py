@@ -133,7 +133,7 @@ class Screen:
 
 
 def status(name, arrangement, ssid, ip, clients, state, colour,
-           sd=None, progress=None, marker=None):
+           sd=None, progress=None, marker=None, armed=False):
     s = Screen()
     s.corners(CYAN)
     s.text(L_LEFT, 4, "//" + name, CYAN)
@@ -151,6 +151,11 @@ def status(name, arrangement, ssid, ip, clients, state, colour,
     if marker:
         s.rect(84, 55, 5, 5, marker)
     s.text(92, 54, state, colour)
+    # Second state line, mirroring displayUpdate() in ui_display.cpp.
+    if armed:
+        s.rect(92, 63, 5, 5, AMBER)
+        s.text(101, 62, "BOOT", AMBER)
+
     if progress is not None:
         cells, bar_w = 16, L_RIGHT - L_LEFT
         cw = bar_w // cells
